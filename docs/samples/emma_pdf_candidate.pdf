@@ -1,0 +1,59 @@
+%PDF-1.4
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Kids [3 0 R] /Count 1 >>
+endobj
+3 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >>
+endobj
+4 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>
+endobj
+5 0 obj
+<< /Length 909 >>
+stream
+BT
+/F1 10 Tf
+40 750 Td
+14 TL
+(Emma Novak) Tj T*
+(Python Developer) Tj T*
+(emma.novak@example.com | Vienna, Austria) Tj T*
+() Tj T*
+(SUMMARY) Tj T*
+(Python developer with 5+ years of professional experience building) Tj T*
+(backend services and web applications.) Tj T*
+() Tj T*
+(SKILLS) Tj T*
+(Python, Django, REST APIs, SQL, PostgreSQL, Docker, Redis, Git) Tj T*
+() Tj T*
+(EXPERIENCE) Tj T*
+(Python Developer - DataWorks \(2021 - present\)) Tj T*
+(- Developed REST APIs with Django for a logistics platform) Tj T*
+(- Deployed services with Docker and managed PostgreSQL schemas) Tj T*
+(- Wrote complex SQL reports and data migrations) Tj T*
+() Tj T*
+(Backend Developer - SoftLine \(2019 - 2021\)) Tj T*
+(- Built Python scripts for data processing and automation) Tj T*
+(- Maintained internal web applications used by 200+ staff) Tj T*
+() Tj T*
+(EDUCATION) Tj T*
+(B.Sc. Software Engineering, TU Wien) Tj T*
+ET
+endstream
+endobj
+xref
+0 6
+0000000000 65535 f 
+0000000009 00000 n 
+0000000058 00000 n 
+0000000115 00000 n 
+0000000241 00000 n 
+0000000311 00000 n 
+trailer
+<< /Size 6 /Root 1 0 R >>
+startxref
+1271
+%%EOF

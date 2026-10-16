@@ -1,0 +1,21 @@
+Carol Silva
+Frontend Developer
+
+SUMMARY
+Frontend developer specializing in JavaScript and TypeScript. I have built
+single-page applications with React, Angular and Vue, and integrated them
+with REST APIs. JavaScript frameworks are my daily tools; I have not worked
+with Java or backend systems.
+
+SKILLS
+JavaScript, TypeScript, React, Redux, Angular, Vue, Node.js, HTML5, CSS3,
+Sass, Webpack, Jest
+
+EXPERIENCE
+Frontend Developer - DesignHub (2020 - present)
+- 4 years building SPA web applications for e-commerce clients
+- Consumed REST APIs from the frontend and mocked them with Postman
+- Improved load times through performance testing and code splitting
+
+EDUCATION
+BA in Graphic Design

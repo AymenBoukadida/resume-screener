@@ -1,0 +1,17 @@
+Bob Chen
+Junior Software Developer
+
+SKILLS
+Python, Flask, JavaScript, HTML, CSS, Git, MySQL
+
+SUMMARY
+Junior developer with 2 years of experience in web development.
+
+EXPERIENCE
+Junior Developer - Startup.io (2023 - present)
+- Built internal dashboards with Python and Flask
+- Wrote basic SQL queries for weekly reports
+- Collaborated in an agile team of five developers
+
+EDUCATION
+B.Sc. Information Systems

@@ -1,0 +1,16 @@
+We are looking for a Senior Python Developer with strong experience in backend development.
+
+Required Skills:
+- Python
+- Django
+- REST APIs
+- SQL
+
+Preferred Skills:
+- PostgreSQL
+- Docker
+- AWS
+
+Experience:
+- 3+ years of professional Python development
+- Experience building web applications

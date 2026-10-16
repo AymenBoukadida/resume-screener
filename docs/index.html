@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Résumé Screening System</title>
+  <meta name="description" content="Rank résumés against a job description in your browser. No uploads, no server — everything runs locally.">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header>
+    <h1>🗂️ Résumé Screening System</h1>
+    <p>
+      Ranks résumés against a job description with a fixed weighted formula —
+      and tells each candidate how to improve their CV. Works in
+      <strong>English and French</strong> (CVs and job descriptions).
+      Everything runs <strong>in your browser</strong>; files never leave your machine.
+    </p>
+  </header>
+
+  <main>
+    <section class="card">
+      <label for="jd-input"><strong>1 · Paste the job description</strong></label>
+      <div class="row">
+        <button id="load-sample-jd" class="ghost" type="button">Sample JD (EN)</button>
+        <button id="load-sample-jd-fr" class="ghost" type="button">Exemple d'offre (FR)</button>
+      </div>
+      <textarea id="jd-input" rows="10"
+        placeholder="Paste the job description here — English or French (Collez l'offre d'emploi ici, en français ou en anglais)."></textarea>
+    </section>
+
+    <section class="card">
+      <label for="resume-files"><strong>2 · Choose résumé files</strong> (PDF, DOCX, TXT)</label>
+      <input type="file" id="resume-files" multiple accept=".pdf,.docx,.txt">
+      <div class="row">
+        <button id="load-sample-resumes" class="ghost" type="button">Or load 6 sample résumés (EN + FR)</button>
+      </div>
+      <ul id="file-list" class="file-list" hidden></ul>
+    </section>
+
+    <section class="card center">
+      <button id="run-btn" class="primary" type="button" disabled>Screen résumés</button>
+      <p id="status" class="status"></p>
+    </section>
+
+    <section id="results" hidden>
+      <div class="card" id="requirements-card"></div>
+      <div class="card">
+        <h2>Ranked results</h2>
+        <div class="table-wrap">
+          <table id="ranking-table">
+            <thead>
+              <tr>
+                <th>#</th><th>Résumé</th><th>Score</th>
+                <th title="Required skills coverage">Required</th>
+                <th title="Preferred skills coverage">Preferred</th>
+                <th title="Experience coverage">Experience</th>
+                <th title="Keyword coverage">Keywords</th>
+                <th title="Years of experience detected">Years</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+        <p class="hint">Click a résumé below for its skill breakdown and CV-improvement tips.</p>
+      </div>
+      <div id="details"></div>
+    </section>
+  </main>
+
+  <footer>
+    <p>
+      Scoring: required skills 50% · preferred 25% · experience 15% · keywords 10%.
+      Scores are a first-pass signal to support, not replace, human review.
+    </p>
+  </footer>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

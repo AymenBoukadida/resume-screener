@@ -1,0 +1,28 @@
+Julie Moreau
+Développeuse Python Senior
+julie.moreau@example.com | Lyon, France
+
+RÉSUMÉ
+Développeuse backend avec 6 ans d'expérience dans le développement d'applications
+web et les systèmes distribués.
+
+COMPÉTENCES
+- Langages : Python, SQL, Bash
+- Frameworks : Django, FastAPI, Flask
+- Bases de données : PostgreSQL, MySQL, Redis
+- Cloud & DevOps : AWS, Docker, Kubernetes, intégration continue
+- API : API REST, GraphQL, microservices
+- Pratiques : Agile, développement piloté par les tests, revue de code, Git
+
+EXPÉRIENCE PROFESSIONNELLE
+Développeuse Python Senior — FinTech SAS (2021 - aujourd'hui)
+- Conception d'API REST avec Django pour une plateforme logistique
+- Optimisation des requêtes PostgreSQL (latence p95 réduite de 60 %)
+- Mise en place de tests unitaires et d'intégration continue
+
+Développeuse Python — CloudScale (2019 - 2021)
+- Développement web avec Python et SQL
+- Conteneurisation des services avec Docker
+
+FORMATION
+Master Informatique, Université de Lyon

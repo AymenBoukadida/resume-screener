@@ -1,0 +1,9 @@
+{
+  "weights": {
+    "required_skills": 0.5,
+    "preferred_skills": 0.25,
+    "experience": 0.15,
+    "keywords": 0.1
+  },
+  "default_expected_years": 3
+}

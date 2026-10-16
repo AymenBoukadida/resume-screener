@@ -1,0 +1,28 @@
+Alice Nakamura
+Senior Backend Engineer
+alice.nakamura@example.com | Berlin, Germany
+
+SUMMARY
+Senior backend engineer with 7+ years of professional experience building
+scalable web applications and distributed systems.
+
+SKILLS
+- Languages: Python, SQL, Bash
+- Frameworks: Django, Django Rest Framework, FastAPI, Flask
+- Databases: PostgreSQL, MySQL, Redis
+- Cloud & DevOps: AWS, Docker, Kubernetes, Terraform, CI/CD
+- APIs: REST APIs, GraphQL, microservices
+- Practices: Agile, test-driven development, code review, Git
+
+EXPERIENCE
+Senior Backend Engineer - FinTech GmbH (2021 - present)
+- Designed REST APIs with Django Rest Framework serving 2M requests/day
+- Migrated a monolith to microservices on AWS using Docker and Kubernetes
+- Optimized PostgreSQL queries, reducing p95 latency by 60%
+
+Backend Developer - CloudScale Ltd (2019 - 2021)
+- Built data pipelines in Python and SQL
+- Introduced CI/CD pipelines with automated testing using pytest
+
+EDUCATION
+B.Sc. Computer Science, University of Tokyo
