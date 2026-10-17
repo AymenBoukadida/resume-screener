@@ -4,14 +4,26 @@ Total Score = (Required Skills × 50%)
             + (Preferred Skills × 25%)
             + (Experience × 15%)
             + (Keywords × 10%)
+
+A JavaScript mirror of this module lives in docs/app.js (scoreCandidate) —
+keep the two in sync when changing scoring behaviour.
 """
 
 import json
+import math
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import List, Set, Union
 
 from parsers.jd_parser import JobRequirements
+
+
+def round_half_up(value: float, digits: int = 1) -> float:
+    """Round half away from zero, matching JavaScript's Math.round-based
+    display, so the CLI and web app always show identical totals (Python's
+    built-in round() would give 87.2 where the web app shows 87.3)."""
+    factor = 10 ** digits
+    return math.floor(value * factor + 0.5) / factor
 
 DEFAULT_CONFIG_PATH = Path(__file__).resolve().parents[1] / "data" / "config.json"
 
@@ -99,7 +111,7 @@ class ScoringEngine:
 
         return CandidateScore(
             filename=filename,
-            total=round(total, 1),
+            total=round_half_up(total, 1),
             required_score=required_score,
             preferred_score=preferred_score,
             experience_score=experience_score,

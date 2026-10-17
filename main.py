@@ -17,9 +17,9 @@ import pandas as pd
 
 from extractors.keyword_extractor import KeywordExtractor
 from matcher.feedback import generate_feedback
-from matcher.scorer import CandidateScore, ScoringEngine
+from matcher.scorer import CandidateScore, ScoringEngine, round_half_up
 from parsers.jd_parser import JDParser, JobRequirements
-from parsers.resume_parser import ResumeParser, parse_resume_file
+from parsers.resume_parser import ResumeParser, parse_resume_file, read_text_best_effort
 
 logger = logging.getLogger(__name__)
 
@@ -28,7 +28,7 @@ def load_jd_text(jd_path: Path) -> str:
     """Load a job description from a TXT or PDF file."""
     if jd_path.suffix.lower() == ".pdf":
         return ResumeParser().parse(jd_path)
-    return jd_path.read_text(encoding="utf-8", errors="ignore")
+    return read_text_best_effort(jd_path)
 
 
 def run_screening(
@@ -38,7 +38,9 @@ def run_screening(
 
     Uses a multiprocessing pool when *workers* > 1; otherwise parses
     sequentially. Returns the requirements, the ranked candidates, the
-    results table and per-candidate improvement tips keyed by filename.
+    results table and per-candidate improvement tips aligned by position
+    with the ranked candidates (an input folder can hold duplicate
+    basenames, so filenames are not safe keys).
     """
     extractor = KeywordExtractor()
     requirements = JDParser(extractor).parse(jd_text)
@@ -71,35 +73,56 @@ def run_screening(
         )
 
     ranked = engine.rank(candidates)
-    feedback = {
-        candidate.filename: generate_feedback(
-            candidate, requirements, engine.default_expected_years
-        )
+    feedback = [
+        generate_feedback(candidate, requirements, engine.default_expected_years)
         for candidate in ranked
-    }
+    ]
+    labels = _weight_labels(engine.weights)
     dataframe = pd.DataFrame(
         [
-            _candidate_row(rank, candidate, feedback[candidate.filename])
-            for rank, candidate in enumerate(ranked, 1)
+            _candidate_row(rank, candidate, tips, labels)
+            for rank, (candidate, tips) in enumerate(zip(ranked, feedback), 1)
         ]
     )
     return requirements, ranked, dataframe, feedback
 
 
-def _candidate_row(rank: int, candidate: CandidateScore, feedback: List[str]) -> dict:
+def _weight_labels(weights: dict) -> dict:
+    """Column labels whose percentages always match the loaded weights."""
+    names = {
+        "required_skills": "Required",
+        "preferred_skills": "Preferred",
+        "experience": "Experience",
+        "keywords": "Keywords",
+    }
+    return {key: f"{name} ({weights[key] * 100:g}%)" for key, name in names.items()}
+
+
+def _csv_safe(value: str) -> str:
+    """Neutralise spreadsheet formula injection: a cell starting with
+    =, +, - or @ (e.g. a crafted filename) would execute as a formula when
+    the CSV is opened in Excel or Google Sheets."""
+    if value.startswith(("=", "+", "-", "@")):
+        return "'" + value
+    return value
+
+
+def _candidate_row(
+    rank: int, candidate: CandidateScore, feedback: List[str], labels: dict
+) -> dict:
     return {
         "Rank": rank,
-        "Resume": candidate.filename,
+        "Resume": _csv_safe(candidate.filename),
         "Score": candidate.total,
-        "Required (50%)": round(candidate.required_score * 100, 1),
-        "Preferred (25%)": round(candidate.preferred_score * 100, 1),
-        "Experience (15%)": round(candidate.experience_score * 100, 1),
-        "Keywords (10%)": round(candidate.keyword_score * 100, 1),
+        labels["required_skills"]: round_half_up(candidate.required_score * 100, 1),
+        labels["preferred_skills"]: round_half_up(candidate.preferred_score * 100, 1),
+        labels["experience"]: round_half_up(candidate.experience_score * 100, 1),
+        labels["keywords"]: round_half_up(candidate.keyword_score * 100, 1),
         "Years": candidate.experience_years,
-        "Matched required": ", ".join(sorted(candidate.matched_required)),
-        "Missing required": ", ".join(sorted(candidate.missing_required)),
-        "Matched preferred": ", ".join(sorted(candidate.matched_preferred)),
-        "Suggestions": " | ".join(feedback),
+        "Matched required": _csv_safe(", ".join(sorted(candidate.matched_required))),
+        "Missing required": _csv_safe(", ".join(sorted(candidate.missing_required))),
+        "Matched preferred": _csv_safe(", ".join(sorted(candidate.matched_preferred))),
+        "Suggestions": _csv_safe(" | ".join(feedback)),
     }
 
 
@@ -185,9 +208,9 @@ def main(argv=None) -> int:
                                   "Matched preferred", "Suggestions"]).to_string(index=False))
 
     print("\n=== How each candidate can improve their CV ===")
-    for candidate in ranked:
+    for candidate, tips in zip(ranked, feedback):
         print(f"\n{candidate.filename} (score {candidate.total}):")
-        for tip in feedback[candidate.filename]:
+        for tip in tips:
             print(f"  - {tip}")
 
     try:

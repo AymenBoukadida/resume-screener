@@ -34,9 +34,9 @@ the web app parses and scores everything in the visitor's browser.
 ```
                 ┌────────────────────┐
  Résumés        │   Résumé Parser    │       plain text
- (PDF/DOCX/TXT) │ (PyPDF2 / docx /   │ ─────────────────────┐
- ──────────────►│  pdf.js / mammoth) │                      │
-                └────────────────────┘                      ▼
+ (PDF/DOCX/TXT) │ (pypdf / docx /    │ ─────────────────────┐
+ ──────────────►│  pdf.js / mammoth) │                      ▼
+                └────────────────────┘                      │
                 ┌────────────────────┐       ┌──────────────────────────┐
  Job            │     JD Parser      │       │    Keyword Extractor     │
  description    │  required/preferred│──────►│ taxonomy matching +      │
@@ -61,8 +61,9 @@ the web app parses and scores everything in the visitor's browser.
 3. **Keyword extractor** matches text against the skill taxonomy
    case-insensitively and accent-insensitively, with word boundaries — so
    "Java" does not match inside "JavaScript", while "c++" and "c#" still
-   match. It also detects years of experience ("5+ years", "5 ans",
-   "cinq années").
+   match. It also detects years of experience ("5+ years", "5 ans", "cinq
+   années", "1,5 an"), keeping the highest figure for a CV and the lowest
+   for a JD's range ("3–5 years" asks for 3).
 4. **Scoring engine** applies the weighted formula and ranks candidates.
 5. **Feedback generator** converts each score breakdown into actionable CV
    advice, including a warning when a file looks like a scanned image with no
@@ -81,7 +82,7 @@ Total Score = (Required Skills × 50%)
 |---|---|---|
 | Required skills | 50% | Share of the JD's required skills found in the CV |
 | Preferred skills | 25% | Share of the JD's preferred skills found in the CV |
-| Experience | 15% | Years detected in the CV ÷ years requested in the JD (capped at 1.0) |
+| Experience | 15% | Years detected in the CV ÷ years requested in the JD (capped at 1.0); a JD range like "3–5 years" sets the bar at its lower bound |
 | Keywords | 10% | Share of the JD's domain keywords found in the CV |
 
 Each component is a coverage ratio between 0 and 1, so the total score is
@@ -99,14 +100,16 @@ included in the CSV output.
   *Compétences requises : Python, Django*.
 - The taxonomy contains French synonyms for most skills (*api rest*,
   *intégration continue*, *tests unitaires*, *travail d'équipe*, …).
-- Experience detection understands "3+ years", "5 ans", "3 années" and
-  spelled-out numbers in both languages.
+- Experience detection understands "3+ years", "5 ans", "3 années",
+  decimals ("1,5 an") and spelled-out numbers in both languages. A CV is
+  credited with the highest figure it mentions; a JD range like "3–5 ans"
+  sets its threshold at the lower bound.
 
 ## Getting started
 
 ### Prerequisites
 
-- Python 3.8 or later (CLI only — the web app needs no runtime)
+- Python 3.9 or later (CLI only — the web app needs no runtime)
 - A modern browser for the web app
 
 ### Installation
@@ -175,8 +178,12 @@ uploaded anywhere.
    branch `main`, folder `/docs`.
 3. The site goes live at `https://<username>.github.io/<repo>/`.
 
-The PDF and DOCX readers (pdf.js, mammoth.js) are loaded from a CDN, so those
-two formats need internet access; TXT screening works fully offline.
+The PDF and DOCX readers (pdf.js, mammoth.js) are loaded from a CDN with
+Subresource Integrity pins — if the CDN is ever compromised and serves
+different bytes, browsers refuse to execute them — and the pdf.js worker is
+vendored in `docs/vendor/`, version-locked to the app. TXT screening works
+fully offline. The page also ships a strict Content-Security-Policy that
+only allows its own files plus the two pinned CDN libraries to load.
 
 ## Configuration
 
@@ -186,6 +193,10 @@ Everything tunable lives in `data/` — no code changes required.
 |---|---|
 | `data/config.json` | Component weights (must sum to 1.0) and the default experience expectation when the JD doesn't state one |
 | `data/skills_taxonomy.json` | The skills database: `category → skill → [synonym variations]`. Matching is accent-free; add a skill by adding one entry |
+
+The weights are a live setting: the percentages shown in the CLI table, the
+CSV columns and the web app are derived from `config.json` at run time, so
+editing the weights updates every label automatically.
 
 After editing either file, refresh the web app's copy:
 
@@ -198,6 +209,23 @@ Regenerate the sample DOCX/PDF résumés at any time:
 ```bash
 python scripts/make_sample_data.py
 ```
+
+## Tests
+
+The CLI and the browser app implement the same engine twice (Python and
+JavaScript), so the suite pins the shared behaviour: taxonomy matching,
+years-of-experience extraction (ranges, decimals, French forms), JD section
+splitting, scoring and rounding parity, feedback generation, file-decoding
+fallbacks, and an end-to-end CLI run on the sample data.
+
+```bash
+pip install -r requirements-dev.txt
+python -m pytest
+```
+
+CI ([.github/workflows/ci.yml](.github/workflows/ci.yml)) runs the suite on
+Ubuntu and Windows against Python 3.9 and 3.13, and fails if the `docs/`
+data copies have drifted from `data/`.
 
 ## Project structure
 
@@ -219,12 +247,15 @@ python scripts/make_sample_data.py
 ├── docs/                     # Static web app (GitHub Pages root)
 │   ├── index.html / app.js / style.css
 │   ├── data/                 # Synced copies of the JSONs + sample JDs
-│   └── samples/              # Synced copies of the sample résumés
+│   ├── samples/              # Synced copies of the sample résumés
+│   └── vendor/               # Vendored pdf.js worker (version-locked)
 ├── input/sample_resumes/     # Six sample résumés (EN + FR, txt/docx/pdf)
-├── output/                   # ranked_resumes.csv (CLI output)
-└── scripts/
-    ├── make_sample_data.py   # Regenerates the DOCX/PDF samples
-    └── sync_web_data.py      # Refreshes docs/data + docs/samples
+├── output/                   # ranked_resumes.csv (CLI output, gitignored)
+├── tests/                    # Pytest suite (engine, parsers, CLI e2e)
+├── scripts/
+│   ├── make_sample_data.py   # Regenerates the DOCX/PDF samples
+│   └── sync_web_data.py      # Refreshes docs/data + docs/samples
+└── .github/workflows/ci.yml  # CI: tests + docs/ sync check
 ```
 
 ## Error handling
@@ -233,11 +264,13 @@ python scripts/make_sample_data.py
 |---|---|
 | Corrupt or empty résumé in the batch | Warning printed; file scored as empty; run continues |
 | File format not supported | Skipped with a warning |
+| Résumé larger than 25 MB | Skipped with a warning (browser and CLI) — protects against memory-exhaustion files such as zip-bomb DOCX |
 | Job description unreadable or empty | Clean error, exit code 1 |
 | No taxonomy skills found in the JD | Clean error, exit code 1 — no partial results |
 | `config.json` invalid (bad JSON, missing weights, weights ≠ 1.0) | Clear `ValueError` before scoring starts |
 | Output folder not writable | Clean error, exit code 1 |
-| Browser: a résumé parser hangs or fails | 30 s read cap per file; the file becomes a warning and the rest of the batch is screened |
+| Filename crafted as a spreadsheet formula (e.g. `=WEBSERVICE(...)`) | Neutralised in the CSV export so Excel/Sheets show it as text |
+| Browser: a résumé parser hangs or fails | 30 s cap covering the whole read (open + every page); the file becomes a warning and the rest of the batch is screened |
 
 ## Limitations and responsible use
 
@@ -250,3 +283,7 @@ python scripts/make_sample_data.py
   consistent first pass to support human review, never as an automated
   rejection decision. A fixed formula reduces inconsistency, but bias can
   still enter through the taxonomy and the job description itself.
+
+## License
+
+Released under the [MIT License](LICENSE).

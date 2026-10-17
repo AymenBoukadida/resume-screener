@@ -1,5 +1,9 @@
 """JD parser: extracts required skills, preferred skills, experience and
-keywords from a job description."""
+keywords from a job description.
+
+A JavaScript mirror of this module lives in docs/app.js (parseJd,
+splitSections) — keep the two in sync when changing parsing behaviour.
+"""
 
 import re
 from dataclasses import dataclass, field
@@ -30,6 +34,13 @@ SECTION_PATTERNS = [
     )),
 ]
 
+# Lines starting with these (de-accented) words are sentences, not headers —
+# "We value experience" must not hijack section parsing. Pronoun openers only,
+# so real headers like "Relevant experience" or "Le profil requis" still pass.
+_SENTENCE_OPENERS = {
+    "we", "you", "your", "our", "i", "nous", "vous", "votre", "notre",
+}
+
 
 @dataclass
 class JobRequirements:
@@ -39,10 +50,10 @@ class JobRequirements:
     preferred_skills: Set[str] = field(default_factory=set)
     keywords: Set[str] = field(default_factory=set)
     experience_years: int = 0
-
-    @property
-    def has_explicit_sections(self) -> bool:
-        return bool(self.required_skills or self.preferred_skills)
+    # True only when the JD itself declared Required/Preferred sections.
+    # Set before the unstructured fallback fills required_skills, which must
+    # not flip this flag (the web app's "treated as required" hint reads it).
+    has_explicit_sections: bool = False
 
 
 class JDParser:
@@ -57,6 +68,7 @@ class JDParser:
         required = self.extractor.extract_skills("\n".join(sections["required"]))
         preferred = self.extractor.extract_skills("\n".join(sections["preferred"]))
 
+        has_explicit_sections = bool(required or preferred)
         # Fallback for JDs without explicit sections.
         if not required and not preferred:
             required = self.extractor.extract_skills(jd_text)
@@ -70,7 +82,12 @@ class JDParser:
             required_skills=required,
             preferred_skills=preferred,
             keywords=keywords,
-            experience_years=self.extractor.extract_experience_years(jd_text),
+            # A "3-5 years" JD is met at 3 years, so the JD threshold is the
+            # lowest figure mentioned (résumés keep the highest).
+            experience_years=self.extractor.extract_experience_years(
+                jd_text, mode="min"
+            ),
+            has_explicit_sections=has_explicit_sections,
         )
 
     def _split_sections(self, jd_text: str) -> dict:
@@ -119,8 +136,16 @@ class JDParser:
 
     @staticmethod
     def _match_header(line: str) -> Optional[str]:
-        """A header is a short line like 'Required Skills:' — long sentences
-        that merely contain the word 'experience' must not qualify."""
-        if len(line.split()) > 3 and not line.endswith(":"):
+        """A header is a short line like 'Required Skills:' — sentences that
+        merely contain the word 'experience' must not qualify.
+
+        A line is accepted when it ends with ':' (the strong header signal,
+        any length), or when it is short, free of sentence-ending punctuation
+        and does not open with a pronoun like "we"/"vous"."""
+        if line.endswith(":"):
+            return JDParser._match_section_label(line)
+        if len(line.split()) > 3 or line[-1] in ".!?;,":
+            return None
+        if line.split()[0] in _SENTENCE_OPENERS:
             return None
         return JDParser._match_section_label(line)

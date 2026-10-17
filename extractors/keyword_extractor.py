@@ -3,6 +3,9 @@
 Matching is accent-insensitive and case-insensitive, so English and French
 text ("développement web", "DEVELOPPEMENT WEB") all match the same
 accent-free variations stored in the taxonomy.
+
+A JavaScript mirror of this module lives in docs/app.js (extractSkills,
+extractYears) — keep the two in sync when changing matching behaviour.
 """
 
 import json
@@ -15,9 +18,16 @@ DEFAULT_TAXONOMY_PATH = (
     Path(__file__).resolve().parents[1] / "data" / "skills_taxonomy.json"
 )
 
-# "3+ years", "5 ans", "3 années", "3-5 years" (first number wins).
-# Covers English and French forms; text is de-accented before matching.
-_YEARS_RE = re.compile(r"(\d{1,2})\s*(?:\+|to|-|–)?\s*(?:years?|ans?|annee?s?)\b")
+# "3+ years", "5 ans", "3 années", "3-5 years" (both range bounds captured),
+# "1.5 years" / "1,5 an" (decimals truncated). Covers English and French
+# forms; text is de-accented before matching. The left guard stops a number
+# like the "5" in "1.5" from matching on its own; the second bound is
+# optional so "5+ years" (separator, no upper limit) still matches.
+_YEARS_RE = re.compile(
+    r"(?<![\d.,])(\d{1,2}(?:[.,]\d)?)"
+    r"(?:\s*(?:\+|to|-|–)(?:\s*(\d{1,2}(?:[.,]\d)?))?)?"
+    r"\s*(?:years?|ans?|annee?s?)\b"
+)
 _WORD_YEARS_RE_TEMPLATE = r"\b({word})\s*(?:\+|to|-|–)?\s*(?:years?|ans?|annee?s?)\b"
 _WORD_NUMBERS = {
     # English
@@ -89,14 +99,30 @@ class KeywordExtractor:
 
         return found_skills
 
-    def extract_experience_years(self, text: str) -> int:
-        """Return the highest number of years of experience mentioned."""
+    def extract_experience_years(self, text: str, mode: str = "max") -> int:
+        """Return the number of years of experience mentioned in *text*.
+
+        *mode* picks which bound of a range like "3-5 years" is used:
+        "max" for résumés (a CV's highest figure approximates total
+        experience) and "min" for job descriptions (the lowest figure the
+        role accepts, so a 4-year candidate is not penalised by a "3-5
+        years" ad). Fractional years are truncated.
+        """
+        if mode not in ("min", "max"):
+            raise ValueError(f"mode must be 'min' or 'max', got {mode!r}")
         text_norm = normalize_text(text)
-        years = [int(value) for value in _YEARS_RE.findall(text_norm)]
+        years = [
+            float(bound.replace(",", "."))
+            for match in _YEARS_RE.findall(text_norm)
+            for bound in match
+            if bound
+        ]
         for word, value in _WORD_NUMBERS.items():
             word_re = re.compile(
                 _WORD_YEARS_RE_TEMPLATE.format(word=word), re.IGNORECASE
             )
             if word_re.search(text_norm):
-                years.append(value)
-        return max(years, default=0)
+                years.append(float(value))
+        if not years:
+            return 0
+        return int(max(years) if mode == "max" else min(years))

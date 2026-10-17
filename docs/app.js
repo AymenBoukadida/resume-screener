@@ -1,6 +1,11 @@
 /* Résumé Screening System — static web app.
  * Text extraction (PDF via pdf.js, DOCX via mammoth.js), skill matching,
  * scoring and CV feedback, all client-side. Data comes from docs/data/.
+ *
+ * The normalization, JD parsing, years extraction, scoring and feedback
+ * logic MIRRORS the Python engine (extractors/keyword_extractor.py,
+ * parsers/jd_parser.py, matcher/scorer.py, matcher/feedback.py) — change
+ * both sides together.
  */
 "use strict";
 
@@ -69,22 +74,35 @@ function extractSkills(text) {
   return found;
 }
 
-// "3+ years" / "5 ans" / "3 années" / "cinq ans" — takes the maximum.
+// "3+ years" / "5 ans" / "3-5 years" (both range bounds captured) /
+// "cinq ans" / "1,5 an" (decimals truncated). mode "max" is the résumé
+// heuristic (highest figure ≈ total experience), "min" the JD threshold
+// (lowest figure the role accepts). No lookbehind (unsupported in older
+// Safari): the leading group guards the left boundary instead.
 const YEARS_UNIT = "(?:years?|ans?|annee?s?)";
-const YEARS_DIGIT_RE = new RegExp("(\\d{1,2})\\s*(?:\\+|to|-|–)?\\s*" + YEARS_UNIT + "\\b", "g");
+const YEARS_DIGIT_RE = new RegExp(
+  "(^|[^\\d.,])(\\d{1,2}(?:[.,]\\d)?)" +
+    "(?:\\s*(?:\\+|to|-|–)(?:\\s*(\\d{1,2}(?:[.,]\\d)?))?)?" +
+    "\\s*" + YEARS_UNIT + "\\b",
+  "g"
+);
 
-function extractYears(text) {
+function extractYears(text, mode = "max") {
   const norm = normalizeText(text);
-  let max = 0;
+  const values = [];
   let m;
   while ((m = YEARS_DIGIT_RE.exec(norm)) !== null) {
-    max = Math.max(max, parseInt(m[1], 10));
+    for (const bound of [m[2], m[3]]) {
+      if (bound) values.push(parseFloat(bound.replace(",", ".")));
+    }
   }
   for (const [word, value] of Object.entries(WORD_NUMBERS)) {
     const wordRe = new RegExp("\\b(" + word + ")\\s*(?:\\+|to|-|–)?\\s*" + YEARS_UNIT + "\\b");
-    if (wordRe.test(norm)) max = Math.max(max, value);
+    if (wordRe.test(norm)) values.push(value);
   }
-  return max;
+  if (!values.length) return 0;
+  const pick = mode === "min" ? Math.min(...values) : Math.max(...values);
+  return Math.floor(pick);
 }
 
 /* ---------------- JD parsing -------------------------------------------- */
@@ -102,10 +120,20 @@ function matchSectionLabel(text) {
   return null;
 }
 
+// Lines starting with these (de-accented) words are sentences, not headers —
+// "We value experience" must not hijack section parsing. Pronoun openers only,
+// so real headers like "Relevant experience" still pass.
+const SENTENCE_OPENERS = new Set([
+  "we", "you", "your", "our", "i", "nous", "vous", "votre", "notre",
+]);
+
 function matchHeader(line) {
-  // A header is short like "Required Skills:" — long sentences that merely
-  // contain the word "experience" must not qualify.
-  if (line.split(/\s+/).length > 3 && !line.endsWith(":")) return null;
+  // A header ends with ":" (the strong signal, any length), or is short,
+  // free of sentence-ending punctuation and does not open with a pronoun.
+  if (line.endsWith(":")) return matchSectionLabel(line);
+  if (line.split(/\s+/).length > 3) return null;
+  if (/[.!?;,]$/.test(line)) return null;
+  if (SENTENCE_OPENERS.has(line.split(/\s+/)[0])) return null;
   return matchSectionLabel(line);
 }
 
@@ -153,6 +181,9 @@ function parseJd(jdText) {
   let required = extractSkills(sections.required.join("\n"));
   const preferred = extractSkills(sections.preferred.join("\n"));
 
+  // True only when the JD declared sections — the fallback below fills
+  // `required`, which must not flip this flag (the UI hint depends on it).
+  const hasExplicitSections = required.size > 0 || preferred.size > 0;
   if (required.size === 0 && preferred.size === 0) {
     required = extractSkills(jdText); // unstructured JD fallback
   }
@@ -166,8 +197,10 @@ function parseJd(jdText) {
     required,
     preferred,
     keywords,
-    years: extractYears(jdText),
-    hasExplicitSections: required.size > 0 || preferred.size > 0,
+    // A "3-5 years" JD is met at 3 years: the JD threshold is the lowest
+    // figure mentioned (résumés keep the highest).
+    years: extractYears(jdText, "min"),
+    hasExplicitSections,
   };
 }
 
@@ -178,6 +211,32 @@ function coverage(matched, target) {
   let hits = 0;
   for (const skill of target) if (matched.has(skill)) hits++;
   return hits / target.size;
+}
+
+// Percentages shown in the UI always derive from the loaded config, so
+// editing docs/data/config.json weights can never leave stale labels.
+function weightPercent(weight) {
+  return parseFloat((weight * 100).toPrecision(3));
+}
+
+function weightLabels() {
+  const w = state.config.weights;
+  return {
+    required: `Required (${weightPercent(w.required_skills)}%)`,
+    preferred: `Preferred (${weightPercent(w.preferred_skills)}%)`,
+    experience: `Experience (${weightPercent(w.experience)}%)`,
+    keywords: `Keywords (${weightPercent(w.keywords)}%)`,
+  };
+}
+
+function scoringSummary() {
+  const w = state.config.weights;
+  return (
+    `required skills ${weightPercent(w.required_skills)}% · ` +
+    `preferred ${weightPercent(w.preferred_skills)}% · ` +
+    `experience ${weightPercent(w.experience)}% · ` +
+    `keywords ${weightPercent(w.keywords)}%`
+  );
 }
 
 function intersection(a, b) {
@@ -294,6 +353,9 @@ function generateFeedback(candidate, reqs) {
 /* ---------------- file parsing ----------------------------------------- */
 
 const READ_TIMEOUT_MS = 30000;
+// Oversized files are almost never legitimate résumés and can be crafted to
+// exhaust memory (e.g. zip-bomb DOCX). Keep in sync with parsers/resume_parser.py.
+const MAX_FILE_BYTES = 25 * 1024 * 1024;
 
 function withTimeout(promise, ms, label) {
   let timer;
@@ -306,36 +368,42 @@ function withTimeout(promise, ms, label) {
   return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
 }
 
+async function pdfToText(arrayBuffer) {
+  const doc = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+  let text = "";
+  for (let i = 1; i <= doc.numPages; i++) {
+    const page = await doc.getPage(i);
+    const content = await page.getTextContent();
+    text += content.items.map(item => item.str).join(" ") + "\n";
+  }
+  return text.trim();
+}
+
 async function fileToText(file) {
+  if (file.size > MAX_FILE_BYTES) {
+    throw new Error(
+      `${(file.size / 1048576).toFixed(1)} MB is over the ` +
+        `${MAX_FILE_BYTES / 1048576} MB cap`
+    );
+  }
   const name = file.name.toLowerCase();
 
+  let textPromise;
+  // The timeout wraps the whole read (document open + every page), not just
+  // the initial fetch, so a pathological file cannot hang past the cap.
   if (name.endsWith(".pdf")) {
     if (!window.pdfjsLib) throw new Error("PDF reader failed to load (offline?)");
-    const doc = await withTimeout(
-      pdfjsLib.getDocument({ data: await file.arrayBuffer() }).promise,
-      READ_TIMEOUT_MS,
-      `Reading ${file.name}`
-    );
-    let text = "";
-    for (let i = 1; i <= doc.numPages; i++) {
-      const page = await doc.getPage(i);
-      const content = await page.getTextContent();
-      text += content.items.map(item => item.str).join(" ") + "\n";
-    }
-    return text.trim();
-  }
-
-  if (name.endsWith(".docx")) {
+    textPromise = pdfToText(await file.arrayBuffer());
+  } else if (name.endsWith(".docx")) {
     if (!window.mammoth) throw new Error("DOCX reader failed to load (offline?)");
-    const result = await withTimeout(
-      mammoth.extractRawText({ arrayBuffer: await file.arrayBuffer() }),
-      READ_TIMEOUT_MS,
-      `Reading ${file.name}`
-    );
-    return result.value.trim();
+    textPromise = mammoth
+      .extractRawText({ arrayBuffer: await file.arrayBuffer() })
+      .then(result => result.value);
+  } else {
+    textPromise = file.text();
   }
-
-  return (await file.text()).trim();
+  const text = await withTimeout(textPromise, READ_TIMEOUT_MS, `Reading ${file.name}`);
+  return text.trim();
 }
 
 /* ---------------- pipeline --------------------------------------------- */
@@ -451,15 +519,16 @@ function renderRanking(candidates) {
 }
 
 function renderDetails(candidates, feedback) {
+  const labels = weightLabels();
   els.details.innerHTML = candidates.map((c, i) => `
     <details class="candidate" ${i === 0 ? "open" : ""}>
       <summary>#${i + 1} — ${esc(c.filename)} — ${c.total.toFixed(1)} / 100</summary>
       <div class="body">
         <div class="metric-row">
-          <div class="metric"><div class="label">Required (50%)</div><div class="value">${(c.requiredScore * 100).toFixed(0)}%</div></div>
-          <div class="metric"><div class="label">Preferred (25%)</div><div class="value">${(c.preferredScore * 100).toFixed(0)}%</div></div>
-          <div class="metric"><div class="label">Experience (15%)</div><div class="value">${(c.experienceScore * 100).toFixed(0)}%</div></div>
-          <div class="metric"><div class="label">Keywords (10%)</div><div class="value">${(c.keywordScore * 100).toFixed(0)}%</div></div>
+          <div class="metric"><div class="label">${labels.required}</div><div class="value">${(c.requiredScore * 100).toFixed(0)}%</div></div>
+          <div class="metric"><div class="label">${labels.preferred}</div><div class="value">${(c.preferredScore * 100).toFixed(0)}%</div></div>
+          <div class="metric"><div class="label">${labels.experience}</div><div class="value">${(c.experienceScore * 100).toFixed(0)}%</div></div>
+          <div class="metric"><div class="label">${labels.keywords}</div><div class="value">${(c.keywordScore * 100).toFixed(0)}%</div></div>
           <div class="metric"><div class="label">Years detected</div><div class="value">${c.years}</div></div>
         </div>
         <p><strong>Matched required:</strong></p><div id="req-ok-${i}"></div>
@@ -533,14 +602,15 @@ async function init() {
     state.config = await configResp.json();
     state.taxonomy = await taxonomyResp.json();
     state.patterns = buildPatterns(state.taxonomy);
+    document.getElementById("scoring-summary").textContent = scoringSummary();
   } catch (err) {
     setStatus(`Failed to load scoring data: ${err.message}`, "error");
     return;
   }
 
   if (window.pdfjsLib) {
-    pdfjsLib.GlobalWorkerOptions.workerSrc =
-      "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+    // Vendored, version-locked next to the app: no CDN call at read time.
+    pdfjsLib.GlobalWorkerOptions.workerSrc = "vendor/pdf.worker.min.js";
   }
 
   els.jd.addEventListener("input", updateRunState);

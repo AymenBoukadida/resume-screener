@@ -2,6 +2,9 @@
 
 Turns a candidate's score breakdown into concrete rewrite tips the
 candidate can act on ("add this skill", "state your years explicitly").
+
+A JavaScript mirror of this module lives in docs/app.js
+(generateFeedback) — keep the two in sync when changing the tips.
 """
 
 from typing import List

@@ -5,6 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Résumé Screening System</title>
   <meta name="description" content="Rank résumés against a job description in your browser. No uploads, no server — everything runs locally.">
+  <!-- Privacy posture: no referrer leaks, and only this page's own files plus
+       the two SRI-pinned CDN libraries may load or execute. -->
+  <meta name="referrer" content="no-referrer">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' https://cdnjs.cloudflare.com; worker-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; font-src 'self'; base-uri 'none'">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -40,7 +44,7 @@
 
     <section class="card center">
       <button id="run-btn" class="primary" type="button" disabled>Screen résumés</button>
-      <p id="status" class="status"></p>
+      <p id="status" class="status" aria-live="polite"></p>
     </section>
 
     <section id="results" hidden>
@@ -70,13 +74,19 @@
 
   <footer>
     <p>
-      Scoring: required skills 50% · preferred 25% · experience 15% · keywords 10%.
+      Scoring: <span id="scoring-summary">required skills 50% · preferred 25% · experience 15% · keywords 10%</span>.
       Scores are a first-pass signal to support, not replace, human review.
     </p>
   </footer>
 
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
+  <!-- integrity pins the CDN libraries: if the CDN is ever compromised and
+       serves different bytes, the browser refuses to execute them. -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"
+          integrity="sha384-/1qUCSGwTur9vjf/z9lmu/eCUYbpOTgSjmpbMQZ1/CtX2v/WcAIKqRv+U1DUCG6e"
+          crossorigin="anonymous"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"
+          integrity="sha384-nFoSjZIoH3CCp8W639jJyQkuPHinJ2NHe7on1xvlUA7SuGfJAfvMldrsoAVm6ECz"
+          crossorigin="anonymous"></script>
   <script src="app.js"></script>
 </body>
 </html>
