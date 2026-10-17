@@ -9,7 +9,7 @@ It ships as two frontends over one scoring engine:
 | Interface | Stack | Best for |
 |---|---|---|
 | Command line (`main.py`) | Python, multiprocessing | Batch-screening a folder of résumés |
-| Web app (`docs/`) | Static HTML/JS | Zero-install use; deploys on GitHub Pages |
+| Web app (`docs/`) | Static HTML/JS | Zero-install use in the browser |
 
 No data ever leaves the machine it runs on: the CLI works on local files, and
 the web app parses and scores everything in the visitor's browser.
@@ -128,10 +128,6 @@ source venv/bin/activate   # Git Bash on Windows: source venv/Scripts/activate
 pip install -r requirements.txt
 ```
 
-If PowerShell blocks `Activate.ps1`, either run
-`Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser` once,
-or call the venv's interpreter directly (`.\venv\Scripts\python.exe`).
-
 ### Command-line usage
 
 ```bash
@@ -169,108 +165,24 @@ python -m http.server 8000 --directory docs
 The page loads the scoring data from `docs/data/`, parses the résumés you
 choose (or the built-in samples) entirely in the browser, and renders the
 ranking, per-candidate breakdowns and CV-improvement tips. Files are never
-uploaded anywhere.
+uploaded anywhere. To publish it, serve the `docs/` folder with any static
+host — the PDF and DOCX readers load from a CDN; TXT screening works fully
+offline.
 
-### Deploying the web app on GitHub Pages
+## Tech stack
 
-1. Push this repository to GitHub.
-2. **Settings → Pages → Build and deployment**: Source *Deploy from a branch*,
-   branch `main`, folder `/docs`.
-3. The site goes live at `https://<username>.github.io/<repo>/`.
-
-The PDF and DOCX readers (pdf.js, mammoth.js) are loaded from a CDN with
-Subresource Integrity pins — if the CDN is ever compromised and serves
-different bytes, browsers refuse to execute them — and the pdf.js worker is
-vendored in `docs/vendor/`, version-locked to the app. TXT screening works
-fully offline. The page also ships a strict Content-Security-Policy that
-only allows its own files plus the two pinned CDN libraries to load.
-
-## Configuration
-
-Everything tunable lives in `data/` — no code changes required.
-
-| File | Purpose |
-|---|---|
-| `data/config.json` | Component weights (must sum to 1.0) and the default experience expectation when the JD doesn't state one |
-| `data/skills_taxonomy.json` | The skills database: `category → skill → [synonym variations]`. Matching is accent-free; add a skill by adding one entry |
-
-The weights are a live setting: the percentages shown in the CLI table, the
-CSV columns and the web app are derived from `config.json` at run time, so
-editing the weights updates every label automatically.
-
-After editing either file, refresh the web app's copy:
-
-```bash
-python scripts/sync_web_data.py
-```
-
-Regenerate the sample DOCX/PDF résumés at any time:
-
-```bash
-python scripts/make_sample_data.py
-```
-
-## Tests
-
-The CLI and the browser app implement the same engine twice (Python and
-JavaScript), so the suite pins the shared behaviour: taxonomy matching,
-years-of-experience extraction (ranges, decimals, French forms), JD section
-splitting, scoring and rounding parity, feedback generation, file-decoding
-fallbacks, and an end-to-end CLI run on the sample data.
-
-```bash
-pip install -r requirements-dev.txt
-python -m pytest
-```
-
-CI ([.github/workflows/ci.yml](.github/workflows/ci.yml)) runs the suite on
-Ubuntu and Windows against Python 3.9 and 3.13, and fails if the `docs/`
-data copies have drifted from `data/`.
-
-## Project structure
-
-```
-├── main.py                   # CLI: parallel screening, CSV export
-├── parsers/
-│   ├── resume_parser.py      # PDF/DOCX/TXT text extraction
-│   └── jd_parser.py          # JD section splitting + skill extraction
-├── extractors/
-│   └── keyword_extractor.py  # Taxonomy matching, years-of-experience
-├── matcher/
-│   ├── scorer.py             # Weighted scoring and ranking
-│   └── feedback.py           # CV-improvement tip generation
-├── data/
-│   ├── config.json           # Weights + default expected years
-│   ├── skills_taxonomy.json  # Skills database (single source of truth)
-│   ├── sample_jd.txt         # Sample job description (EN)
-│   └── sample_jd_fr.txt      # Sample job description (FR)
-├── docs/                     # Static web app (GitHub Pages root)
-│   ├── index.html / app.js / style.css
-│   ├── data/                 # Synced copies of the JSONs + sample JDs
-│   ├── samples/              # Synced copies of the sample résumés
-│   └── vendor/               # Vendored pdf.js worker (version-locked)
-├── input/sample_resumes/     # Six sample résumés (EN + FR, txt/docx/pdf)
-├── output/                   # ranked_resumes.csv (CLI output, gitignored)
-├── tests/                    # Pytest suite (engine, parsers, CLI e2e)
-├── scripts/
-│   ├── make_sample_data.py   # Regenerates the DOCX/PDF samples
-│   └── sync_web_data.py      # Refreshes docs/data + docs/samples
-└── .github/workflows/ci.yml  # CI: tests + docs/ sync check
-```
-
-## Error handling
-
-| Situation | Behaviour |
-|---|---|
-| Corrupt or empty résumé in the batch | Warning printed; file scored as empty; run continues |
-| File format not supported | Skipped with a warning |
-| Résumé larger than 25 MB | Skipped with a warning (browser and CLI) — protects against memory-exhaustion files such as zip-bomb DOCX |
-| Job description unreadable or empty | Clean error, exit code 1 |
-| No taxonomy skills found in the JD | Clean error, exit code 1 — no partial results |
-| `config.json` invalid (bad JSON, missing weights, weights ≠ 1.0) | Clear `ValueError` before scoring starts |
-| Output folder not writable | Clean error, exit code 1 |
-| Filename crafted as a spreadsheet formula (e.g. `=WEBSERVICE(...)`) | Neutralised in the CSV export so Excel/Sheets show it as text |
-| Browser: a résumé parser hangs or fails | 30 s cap covering the whole read (open + every page); the file becomes a warning and the rest of the batch is screened |
+- **CLI** — Python 3.9+; [pypdf](https://pypi.org/project/pypdf/) for PDF text
+  extraction, [python-docx](https://pypi.org/project/python-docx/) for DOCX,
+  [pandas](https://pypi.org/project/pandas/) for the CSV export, and
+  `multiprocessing` for parallel batch parsing.
+- **Web app** — vanilla HTML/CSS/JavaScript, no framework and no build step;
+  [pdf.js](https://mozilla.github.io/pdf.js/) for PDF reading and
+  [mammoth.js](https://github.com/mwilliamson/mammoth.js) for DOCX reading,
+  both loaded from a CDN with Subresource Integrity pins (the pdf.js worker
+  is vendored in `docs/vendor/`); deployable as plain static files.
+- **Shared engine data** — a JSON skills taxonomy and a JSON weights config
+  shared by both frontends (the web app serves synced copies from
+  `docs/data/`).
 
 ## Limitations and responsible use
 
