@@ -60,7 +60,7 @@
     "git": ["git", "github", "gitlab", "bitbucket", "version control", "gestion de versions", "gestion des versions", "controle de version"],
     "linux": ["linux", "unix"],
     "ansible": ["ansible"],
-    "monitoring": ["prometheus", "grafana", "datadog", "sentry"]
+    "monitoring": ["prometheus", "grafana", "datadog", "sentry", "monitoring", "security monitoring", "event monitoring", "system monitoring", "network monitoring", "application monitoring", "infrastructure monitoring", "observability", "supervision systeme"]
   },
   "apis_integration": {
     "rest api": ["rest api", "rest apis", "restful", "restful api", "restful apis", "restful web services", "restful services", "api rest", "apis rest", "api restful", "apis restful"],
@@ -136,5 +136,47 @@
     "time management": ["time management", "prioritization", "prioritisation", "gestion du temps"],
     "adaptability": ["adaptability", "flexibility", "flexible", "adaptabilite", "capacite d'adaptation"],
     "stakeholder management": ["stakeholder management", "stakeholders", "gestion des parties prenantes"]
+  },
+  "security_operations": {
+    "siem": ["siem", "security information and event management", "splunk", "qradar", "arcsight", "microsoft sentinel", "azure sentinel", "sentinel", "wazuh", "fortisiem"],
+    "soar": ["soar", "security orchestration", "security orchestration automation and response", "security automation"],
+    "edr/xdr": ["edr", "xdr", "endpoint detection and response"],
+    "incident response": ["incident response", "incident management", "incident handling", "incident lifecycle", "reponse aux incidents", "gestion des incidents"],
+    "threat detection": ["threat detection", "threat analysis", "threat hunting", "threat intelligence", "detection de menaces", "analyse de menaces"],
+    "vulnerability management": ["vulnerability management", "vulnerability scanning", "vulnerability scans", "vulnerability assessment", "vulnerability analysis", "vulnerability", "vulnerabilities", "gestion des vulnerabilites", "analyse de vulnerabilites"],
+    "log analysis": ["log analysis", "log management", "log monitoring", "log aggregation", "centralized logging", "centralized logs", "centralised logging", "analyse de logs", "analyse des journaux"],
+    "soc": ["soc", "security operations centre", "security operations center", "centre des operations de securite"],
+    "network security": ["network security", "securite reseau", "securite des reseaux"],
+    "firewalls": ["firewall", "firewalls", "fortigate", "fortinet", "palo alto", "pfsense", "pare-feu", "pare-feux"],
+    "privileged access management": ["privileged access management", "pam", "cyberark", "gestion des acces privilegies"],
+    "access management": ["access management", "iam", "identity and access management", "identity management", "gestion des acces"],
+    "mitre att&ck": ["mitre att&ck", "mitre attack"],
+    "digital forensics": ["digital forensics", "computer forensics", "forensics", "dfir", "forensique numerique"],
+    "red team": ["red team", "red teaming", "blue team", "purple team"],
+    "penetration testing": ["penetration testing", "penetration test", "pen testing", "pentest", "ethical hacking", "test d'intrusion", "tests d'intrusion"]
+  },
+  "it_operations": {
+    "servicenow": ["servicenow", "service now"],
+    "solarwinds": ["solarwinds", "solar winds", "solarwinds orion"],
+    "itsm": ["itsm", "it service management", "gestion des services informatiques"],
+    "itil": ["itil", "itil v4", "itilv4"],
+    "patch management": ["patch management", "patching", "security patching", "patch deployment", "gestion des correctifs"],
+    "backup and recovery": ["backup", "backups", "backup and recovery", "backup and restore", "disaster recovery", "veeam", "sauvegarde", "sauvegardes", "gestion des sauvegardes"],
+    "server administration": ["server administration", "server management", "server technologies", "windows server", "linux server", "system administration", "systems administration", "administration systeme", "administration des serveurs"],
+    "active directory": ["active directory", "ad ds", "active directory domain services", "group policy", "gpo"],
+    "virtualization": ["virtualization", "virtualisation", "vmware", "vsphere", "virtualbox", "hyper-v", "hyperv", "kvm"],
+    "troubleshooting": ["troubleshooting", "troubleshoot", "depannage"]
+  },
+  "networking": {
+    "networking": ["networking", "vlan", "vlans", "ospf", "bgp", "ipsec vpn", "vpn", "snmp", "netflow", "subnetting", "dns", "dhcp", "switching", "network configuration", "configuration reseau", "reseaux"]
+  },
+  "certifications": {
+    "security+": ["security+", "security plus", "comptia security+"],
+    "ccna": ["ccna", "cisco certified network associate"],
+    "ccnp": ["ccnp", "cisco certified network professional"],
+    "isc2": ["isc2", "(isc)2"],
+    "cissp": ["cissp"],
+    "ceh": ["ceh", "certified ethical hacker"],
+    "oscp": ["oscp"]
   }
 }

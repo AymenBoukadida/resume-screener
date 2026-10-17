@@ -18,18 +18,24 @@ BULLET_CHARS = "-*•·▪‣–—"
 SECTION_PATTERNS = [
     ("required", re.compile(
         r"\b(required|requirements?|must[\s-]?haves?|essential|qualifications?|"
+        r"what\s+you\s+(?:will\s+)?bring|what\s+we(?:'re|\s+are)\s+looking\s+for|"
+        r"your\s+profile|about\s+you|a\s+propos\s+de\s+vous|who\s+you\s+are|"
+        r"ce\s+que\s+vous\s+apportez|profil\s+recherche|"
         r"requises?|requis|exigees?|exigences?|essentielles?|obligatoires?|"
         r"indispensables?|necessaires?)\b",
         re.IGNORECASE,
     )),
     ("preferred", re.compile(
         r"\b(preferred|nice[\s-]?to[\s-]?haves?|good[\s-]?to[\s-]?haves?|bonus|"
-        r"desirable|pluses?|souhaitees?|souhaite|atouts?|appreciees?|apprecie|"
+        r"desirable|pluses?|what\s+makes\s+you|"
+        r"souhaitees?|souhaite|atouts?|appreciees?|apprecie|"
         r"seraient un plus)\b",
         re.IGNORECASE,
     )),
     ("experience", re.compile(
-        r"\b(experience|responsibilit(?:y|ies)|what\s+you.{0,3}ll\s+do)\b",
+        r"\b(experience|responsibilit(?:y|ies)|what\s+you.{0,3}ll\s+do|"
+        r"(?:a\s+)?day\s+in\s+the\s+life|day[\s-]?to[\s-]?day|your\s+mission|"
+        r"duties|missions|taches|au\s+quotidien)\b",
         re.IGNORECASE,
     )),
 ]
@@ -120,6 +126,13 @@ class JDParser:
                 header = self._match_header(line_norm)
                 if header:
                     current = header
+                    continue
+                # A short "Label:" line that matches no known header still
+                # ends the current section ("Why Work at Long View:") so its
+                # content cannot leak into the previous bucket. Lines with
+                # text after the colon ("Location: Calgary") stay content.
+                if line_norm.endswith(":") and len(line_norm[:-1].split()) <= 5:
+                    current = None
                     continue
 
             if current:

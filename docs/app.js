@@ -108,9 +108,9 @@ function extractYears(text, mode = "max") {
 /* ---------------- JD parsing -------------------------------------------- */
 
 const SECTION_PATTERNS = [
-  ["required", /\b(required|requirements?|must[\s-]?haves?|essential|qualifications?|requises?|requis|exigees?|exigences?|essentielles?|obligatoires?|indispensables?|necessaires?)\b/i],
-  ["preferred", /\b(preferred|nice[\s-]?to[\s-]?haves?|good[\s-]?to[\s-]?haves?|bonus|desirable|pluses?|souhaitees?|souhaite|atouts?|appreciees?|apprecie|seraient un plus)\b/i],
-  ["experience", /\b(experience|responsibilit(?:y|ies)|what\s+you.{0,3}ll\s+do)\b/i],
+  ["required", /\b(required|requirements?|must[\s-]?haves?|essential|qualifications?|what\s+you\s+(?:will\s+)?bring|what\s+we(?:'re|\s+are)\s+looking\s+for|your\s+profile|about\s+you|a\s+propos\s+de\s+vous|who\s+you\s+are|ce\s+que\s+vous\s+apportez|profil\s+recherche|requises?|requis|exigees?|exigences?|essentielles?|obligatoires?|indispensables?|necessaires?)\b/i],
+  ["preferred", /\b(preferred|nice[\s-]?to[\s-]?haves?|good[\s-]?to[\s-]?haves?|bonus|desirable|pluses?|what\s+makes\s+you|souhaitees?|souhaite|atouts?|appreciees?|apprecie|seraient un plus)\b/i],
+  ["experience", /\b(experience|responsibilit(?:y|ies)|what\s+you.{0,3}ll\s+do|(?:a\s+)?day\s+in\s+the\s+life|day[\s-]?to[\s-]?day|your\s+mission|duties|missions|taches|au\s+quotidien)\b/i],
 ];
 
 function matchSectionLabel(text) {
@@ -167,6 +167,14 @@ function splitSections(jdText) {
       const header = matchHeader(lineNorm);
       if (header) {
         current = header;
+        continue;
+      }
+      // A short "Label:" line that matches no known header still ends the
+      // current section ("Why Work at Long View:") so its content cannot
+      // leak into the previous bucket. Lines with text after the colon
+      // ("Location: Calgary") stay content.
+      if (lineNorm.endsWith(":") && lineNorm.slice(0, -1).split(/\s+/).length <= 5) {
+        current = null;
         continue;
       }
     }
