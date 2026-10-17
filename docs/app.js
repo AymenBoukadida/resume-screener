@@ -561,7 +561,7 @@ const SAMPLE_RESUMES = [
 
 async function loadSampleJd(file = "data/sample_jd.txt") {
   const resp = await fetch(file);
-  if (!resp.ok) throw new Error("sample JD not found — run scripts/sync_web_data.py");
+  if (!resp.ok) throw new Error("sample JD not found");
   els.jd.value = await resp.text();
   updateRunState();
 }
@@ -570,7 +570,7 @@ async function loadSampleResumes() {
   const transfer = new DataTransfer();
   for (const name of SAMPLE_RESUMES) {
     const resp = await fetch("samples/" + name);
-    if (!resp.ok) throw new Error("samples missing — run scripts/sync_web_data.py");
+    if (!resp.ok) throw new Error("sample résumés missing");
     transfer.items.add(new File([await resp.arrayBuffer()], name));
   }
   els.files.files = transfer.files;
@@ -597,7 +597,7 @@ async function init() {
       fetch("data/skills_taxonomy.json"),
     ]);
     if (!configResp.ok || !taxonomyResp.ok) {
-      throw new Error("data files missing — run scripts/sync_web_data.py");
+      throw new Error("data files missing");
     }
     state.config = await configResp.json();
     state.taxonomy = await taxonomyResp.json();
