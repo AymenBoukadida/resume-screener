@@ -1,8 +1,8 @@
 # Résumé Screening System
 
 A bilingual (English / French) résumé screening tool that ranks candidates
-against a job description using a fixed, transparent scoring formula — and
-tells every candidate exactly how to improve their CV.
+against a job description using a transparent weighted formula — and tells
+every candidate exactly how to improve their CV.
 
 It ships as two frontends over one scoring engine:
 
@@ -16,58 +16,84 @@ the web app parses and scores everything in the visitor's browser.
 
 ## Features
 
-- **PDF, DOCX and TXT résumés** — text extracted per file, dispatching on format.
+- **PDF, DOCX, TXT and Markdown files** — the CLI reads both résumés and job
+  descriptions per file, dispatching on format. Markdown headings and lists
+  are understood as structure.
+- **Works beyond IT** — a broad, editable skills taxonomy (27 categories,
+  400+ skills) plus a term miner that pulls domain-specific requirements
+  straight from the ad. Nursing, trades, finance, marketing and niche roles
+  produce useful requirements even when the taxonomy has never seen them.
 - **Structured job-description parsing** — required skills, preferred skills,
   experience expectations and domain keywords, from English or French JDs.
+  Explicit cues such as *preferred*, *an asset* or *nice to have* override a
+  Required heading, and a skill listed in both buckets is counted once.
+- **Structured CV fields** — name, email, phone, location, headline,
+  LinkedIn/GitHub/website, education level and history, certifications and
+  languages, exported alongside every score. They help recruiters review any
+  CV, even one whose domain the taxonomy does not cover.
 - **Weighted, auditable scoring** — every candidate is scored with the same
-  formula and the same skill taxonomy; full per-candidate breakdowns are kept.
+  formula and the same skill taxonomy; full per-candidate breakdowns, matched
+  evidence snippets and applied weights are kept.
 - **CV-improvement feedback** — concrete, per-candidate tips: which required
   skills to name explicitly, what experience to quantify, which domain terms
-  to work in.
+  to work in, and which contact details are missing.
 - **Fault tolerant** — unreadable files are reported and skipped; invalid
   configuration or a skill-less job description stops cleanly with a clear
   error instead of a traceback.
-- **Parallel batch processing** — the CLI parses résumés across a process pool.
+- **Parallel batch processing** — the CLI parses résumés across a process pool,
+  optionally recursing into subdirectories.
 
 ## How it works
 
 ```
                 ┌────────────────────┐
  Résumés        │   Résumé Parser    │       plain text
- (PDF/DOCX/TXT) │ (pypdf / docx /    │ ─────────────────────┐
- ──────────────►│  pdf.js / mammoth) │                      ▼
-                └────────────────────┘                      │
-                ┌────────────────────┐       ┌──────────────────────────┐
- Job            │     JD Parser      │       │    Keyword Extractor     │
- description    │  required/preferred│──────►│ taxonomy matching +      │
- (TXT/PDF)      │  /experience       │       │ years-of-experience      │
-                └────────────────────┘       └───────────┬──────────────┘
-                                                         ▼
+ (PDF/DOCX/TXT/ │ (pypdf / docx /    │ ─────────────────────┐
+  MD)           │  pdf.js / mammoth) │                      ▼
+                └────────────────────┘       ┌──────────────────────────┐
+                ┌────────────────────┐       │  Skill matcher +         │
+ Job            │     JD Parser      │       │  term miner +            │
+ description    │  required/preferred│──────►│  field extractor +       │
+ (TXT/MD/PDF/   │  /experience       │       │  years-of-experience     │
+  DOCX)         │  /keywords         │       └───────────┬──────────────┘
+                └────────────────────┘                   ▼
                                              ┌───────────────────────┐
                                              │    Scoring Engine     │
                                              │ weighted formula +    │
                                              │ CV-feedback generator │
                                              └───────────┬───────────┘
                                                          ▼
-                                            Ranked results + CSV +
+                                            Ranked results + CSV/JSON +
                                             improvement tips
 ```
 
-1. **Résumé parser** extracts plain text from each file.
+1. **Résumé parser** extracts plain text from each file. Markdown headings
+   and lists, DOCX paragraphs/tables and PDF pages are supported; text cleanup
+   joins words split across line breaks and removes repeated whitespace.
 2. **JD parser** splits the job description into Required / Preferred /
-   Experience sections and extracts the skills in each. Without explicit
-   sections, every skill mentioned in the JD is treated as required, and any
-   other taxonomy skills it mentions become keywords.
-3. **Keyword extractor** matches text against the skill taxonomy
+   Experience sections, matching section labels against whole header lines
+   only. Inline headers (*Required skills: Python, Django*), Markdown
+   headings, numbered lists and mixed English/French layouts are understood.
+   Explicit preferred cues override a Required section, and skills in both
+   buckets are subtracted from Preferred. Without explicit sections, every
+   skill mentioned in the JD is treated as required.
+3. **Skill matcher + term miner** matches text against the taxonomy
    case-insensitively and accent-insensitively, with word boundaries — so
    "Java" does not match inside "JavaScript", while "c++" and "c#" still
-   match. It also detects years of experience ("5+ years", "5 ans", "cinq
-   années", "1,5 an"), keeping the highest figure for a CV and the lowest
-   for a JD's range ("3–5 years" asks for 3).
-4. **Scoring engine** applies the weighted formula and ranks candidates.
-5. **Feedback generator** converts each score breakdown into actionable CV
-   advice, including a warning when a file looks like a scanned image with no
-   readable text.
+   match. Negated mentions ("no experience with Docker") are ignored, and
+   optional version suffixes ("Node 18") still match. For domains the
+   taxonomy does not cover, the term miner promotes the ad's own repeated,
+   bulleted, capitalised or early phrases into requirements and matches them
+   in CVs. Years of experience are detected too ("5+ years", "5 ans", "cinq
+   années", "1,5 an"), keeping the highest figure for a CV and the lowest for
+   a JD's range ("3–5 years" asks for 3).
+4. **Field extractor** pulls structured contact and background details from
+   each CV. Fields are exported for review but do not affect the score.
+5. **Scoring engine** applies the weighted formula, drops empty categories,
+   and ranks candidates.
+6. **Feedback generator** converts each score breakdown into actionable CV
+   advice, including missing contact details and a warning when a file looks
+   like a scanned image with no readable text.
 
 ## Scoring model
 
@@ -78,7 +104,7 @@ Total Score = (Required Skills × 50%)
             + (Keywords        × 10%)
 ```
 
-| Component | Weight | What it measures |
+| Component | Default weight | What it measures |
 |---|---|---|
 | Required skills | 50% | Share of the JD's required skills found in the CV |
 | Preferred skills | 25% | Share of the JD's preferred skills found in the CV |
@@ -86,10 +112,14 @@ Total Score = (Required Skills × 50%)
 | Keywords | 10% | Share of the JD's domain keywords found in the CV |
 
 Each component is a coverage ratio between 0 and 1, so the total score is
-always between 0 and 100. Because the same weights, taxonomy and formula
-apply to every candidate, the ranking is consistent, reproducible and
-auditable — the full breakdown (matched and missing skills per candidate) is
-included in the CSV output.
+always between 0 and 100. Empty categories are **not** free points: when a JD
+has no preferred skills, no keywords, or no stated experience requirement,
+that component is dropped and the remaining weights are re-normalized to
+100%. The applied weights are shown in the console and exported per
+candidate. Because the same weights, taxonomy and formula apply to every
+candidate, the ranking is consistent, reproducible and auditable — the full
+breakdown (matched and missing skills per candidate, with evidence snippets)
+is included in the CSV and JSON output.
 
 ## Bilingual support (English / Français)
 
@@ -100,6 +130,9 @@ included in the CSV output.
   *Compétences requises : Python, Django*.
 - The taxonomy contains French synonyms for most skills (*api rest*,
   *intégration continue*, *tests unitaires*, *travail d'équipe*, …).
+- Field extraction understands French labels and formats: *Formation*,
+  *Certifications*, *Langues*, *Lieu*, *Poste*, and French credentials such
+  as *DEP*, *AEP*, *ASP* and *CÉGEP*.
 - Experience detection understands "3+ years", "5 ans", "3 années",
   decimals ("1,5 an") and spelled-out numbers in both languages. A CV is
   credited with the highest figure it mentions; a JD range like "3–5 ans"
@@ -136,15 +169,22 @@ python main.py --jd data/sample_jd.txt --input input/sample_resumes --output out
 
 ```text
 Options:
-  --jd       Path to the job description (TXT or PDF). Required.
-  --input    Directory of résumés to screen (default: input).
-  --output   Directory for ranked_resumes.csv (default: output).
-  --workers  Parallel parse processes (default: CPU count, capped at 8).
+  --jd         Path to the job description (TXT, MD, PDF or DOCX). Required.
+  --input      Directory of résumés to screen (default: input).
+  --recursive  Also search subdirectories of --input.
+  --output     Directory for ranked_resumes.csv (default: output).
+  --workers    Parallel parse processes (default: CPU count, capped at 8).
+  --taxonomy   Optional custom skills taxonomy JSON.
+  --config     Optional custom weights JSON.
+  --json       Print machine-readable JSON instead of the table.
 ```
 
 The run prints the extracted requirements, the ranked table and per-candidate
 improvement tips, then writes `ranked_resumes.csv` with columns for each
-score component, matched/missing skills, and the tips.
+score component, matched/missing skills, evidence snippets, extracted CV
+fields (contact details, links, education, certifications, languages) and the
+tips. With `--json`, the full result is printed as JSON and the CSV export is
+skipped.
 
 Try it with the included samples:
 
@@ -164,9 +204,10 @@ python -m http.server 8000 --directory docs
 
 The page loads the scoring data from `docs/data/`, parses the résumés you
 choose (or the built-in samples) entirely in the browser, and renders the
-ranking, per-candidate breakdowns and CV-improvement tips. Files are never
-uploaded anywhere. To publish it, serve the `docs/` folder with any static
-host — the PDF and DOCX readers load from a CDN; TXT screening works fully
+ranking, per-candidate breakdowns, extracted CV fields and CV-improvement
+tips. It accepts PDF, DOCX, TXT and Markdown files. Files are never uploaded
+anywhere. To publish it, serve the `docs/` folder with any static host — the
+PDF and DOCX readers load from a CDN; TXT/Markdown screening works fully
 offline.
 
 ## Tech stack
@@ -186,9 +227,14 @@ offline.
 
 ## Limitations and responsible use
 
-- Screening is **keyword-based**: it does not understand context or negation
-  ("I have not used Docker" counts as Docker), and it only finds skills that
-  are in the taxonomy.
+- Screening is **keyword- and phrase-based**. Simple negation ("no experience
+  with Docker") is handled, but irony, implication and complex sentence
+  context are not. Taxonomy matches only find skills in the taxonomy; term
+  mining covers other domains, at the cost of occasionally promoting an
+  unusual phrase from the ad.
+- Field extraction is intentionally conservative: an empty field is preferred
+  over a wrong one, so unusual layouts may leave some details blank. Review
+  the extracted fields before relying on them.
 - Scanned or image-only PDFs contain no extractable text and will score near
   zero — the feedback flags this case explicitly.
 - The scoring formula is deliberately simple and transparent. Use it as a

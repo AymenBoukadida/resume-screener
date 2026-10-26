@@ -153,6 +153,72 @@ details.candidate .body { padding: 0 16px 14px; }
 
 .improve-title { margin: 14px 0 4px; font-size: 1rem; }
 
+.notice {
+  background: #fff7ed;
+  border: 1px solid #fdba74;
+  color: #9a3412;
+  border-radius: 8px;
+  padding: 10px 12px;
+  max-width: 70ch;
+  font-size: 0.92rem;
+}
+.insight-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.bucket h3 { font-size: 0.95rem; margin: 12px 0 6px; }
+.chip-row { min-height: 2em; }
+.edit-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.edit-chip select {
+  font: inherit;
+  font-size: 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--card);
+}
+.chip-x {
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  padding: 0 4px;
+  color: var(--muted);
+  font-size: 1rem;
+  line-height: 1;
+}
+.chip-x:hover { color: var(--bad); }
+.add-skill {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 12px;
+}
+.add-skill input, .add-skill select {
+  font: inherit;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 10px;
+}
+.add-skill input { flex: 1 1 180px; }
+.evidence { margin: 4px 0 10px; padding-left: 18px; }
+.warn-line { color: var(--warn); }
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  border: 0;
+}
+
 footer { padding: 24px 16px 40px; color: var(--muted); font-size: 0.88rem; }
 
 @media (max-width: 640px) {

@@ -1,61 +1,64 @@
-"""Keyword extractor: matches text against a predefined skills taxonomy.
+"""Keyword extractor: matches text against a skills taxonomy."""
 
-Matching is accent-insensitive and case-insensitive, so English and French
-text ("développement web", "DEVELOPPEMENT WEB") all match the same
-accent-free variations stored in the taxonomy.
-
-A JavaScript mirror of this module lives in docs/app.js (extractSkills,
-extractYears) — keep the two in sync when changing matching behaviour.
-"""
+from __future__ import annotations
 
 import json
 import re
-import unicodedata
 from pathlib import Path
-from typing import Dict, List, Optional, Set, Union
+from typing import Dict, List, Optional, Set, Tuple, Union
+
+from extractors.normalize import normalize_text
 
 DEFAULT_TAXONOMY_PATH = (
     Path(__file__).resolve().parents[1] / "data" / "skills_taxonomy.json"
 )
 
-# "3+ years", "5 ans", "3 années", "3-5 years" (both range bounds captured),
-# "1.5 years" / "1,5 an" (decimals truncated). Covers English and French
-# forms; text is de-accented before matching. The left guard stops a number
-# like the "5" in "1.5" from matching on its own; the second bound is
-# optional so "5+ years" (separator, no upper limit) still matches.
-_YEARS_RE = re.compile(
-    r"(?<![\d.,])(\d{1,2}(?:[.,]\d)?)"
-    r"(?:\s*(?:\+|to|-|–)(?:\s*(\d{1,2}(?:[.,]\d)?))?)?"
-    r"\s*(?:years?|ans?|annee?s?)\b"
+_NEGATION_RE = re.compile(
+    r"\b(?:not|no|never|without|neither|"
+    r"pas|sans|aucun(?:e|es)?|nul(?:le)?)\b"
 )
-_WORD_YEARS_RE_TEMPLATE = r"\b({word})\s*(?:\+|to|-|–)?\s*(?:years?|ans?|annee?s?)\b"
-_WORD_NUMBERS = {
-    # English
-    "one": 1, "two": 2, "three": 3, "four": 4, "five": 5,
-    "six": 6, "seven": 7, "eight": 8, "nine": 9, "ten": 10,
-    # French
-    "un": 1, "une": 1, "deux": 2, "trois": 3, "quatre": 4, "cinq": 5,
-    "six": 6, "sept": 7, "huit": 8, "neuf": 9, "dix": 10,
-}
+_NEGATION_EXCEPTION_RE = re.compile(r"\bnot\s+only\b|\bpas\s+seulement\b")
+_VERSION_SUFFIX = r"(?:[\s._-]*v?\d+(?:\.\d+){0,2})?"
 
 
-def normalize_text(text: str) -> str:
-    """Lowercase, remove accents (é → e) and normalise apostrophes.
+def _is_negated(text_norm: str, start: int) -> bool:
+    window = text_norm[max(0, start - 80):start]
+    if _NEGATION_EXCEPTION_RE.search(window):
+        return False
+    tokens = window.split()[-6:]
+    return bool(_NEGATION_RE.search(" ".join(tokens)))
 
-    Taxonomy variations and section headers are stored accent-free, so both
-    "développement" and "DEVELOPPEMENT" match "developpement".
-    """
-    decomposed = unicodedata.normalize("NFKD", text.lower())
-    stripped = "".join(ch for ch in decomposed if not unicodedata.combining(ch))
-    return stripped.replace("\u2019", "'")
+
+def _snippet(text_norm: str, start: int, end: int, radius: int = 42) -> str:
+    lo = max(0, start - radius)
+    hi = min(len(text_norm), end + radius)
+    chunk = text_norm[lo:hi].strip()
+    if lo > 0:
+        chunk = "…" + chunk
+    if hi < len(text_norm):
+        chunk = chunk + "…"
+    return re.sub(r"\s+", " ", chunk)
+
+
+def validate_taxonomy(taxonomy: object) -> Dict[str, Dict[str, List[str]]]:
+    """Reject malformed taxonomy JSON before it silently scores nothing."""
+    if not isinstance(taxonomy, dict) or not taxonomy:
+        raise ValueError("taxonomy must be a non-empty object of categories")
+    for category, skills in taxonomy.items():
+        if not isinstance(category, str) or not isinstance(skills, dict) or not skills:
+            raise ValueError(f"category {category!r} must map skill to variations")
+        for skill, variations in skills.items():
+            if not isinstance(skill, str) or not isinstance(variations, list) or not variations:
+                raise ValueError(
+                    f"skill {skill!r} in {category!r} must have a non-empty variations list"
+                )
+            if not all(isinstance(item, str) and item.strip() for item in variations):
+                raise ValueError(f"variations for {skill!r} must be non-empty strings")
+    return taxonomy  # type: ignore[return-value]
 
 
 class KeywordExtractor:
-    """Finds skills (and experience indicators) in résumé or JD text.
-
-    Matching is case-insensitive and uses word boundaries so that, for
-    example, "Java" does not match inside "JavaScript".
-    """
+    """Finds skills (and evidence snippets) in résumé or JD text."""
 
     def __init__(
         self,
@@ -70,59 +73,40 @@ class KeywordExtractor:
                 raise ValueError(
                     f"could not load skills taxonomy from {taxonomy_path}: {exc}"
                 ) from exc
-        self.skills_taxonomy = taxonomy
+        self.skills_taxonomy = validate_taxonomy(taxonomy)
         self._compile_patterns()
 
     def _compile_patterns(self) -> None:
-        """Pre-compile one regex per variation, flattened across categories."""
-        self._patterns: List = []
+        """One regex per variation; optional trailing version (Node 18)."""
+        self._patterns: List[Tuple[str, re.Pattern[str]]] = []
         for _category, skills_dict in self.skills_taxonomy.items():
             for skill_name, variations in skills_dict.items():
                 for variation in variations:
-                    # Lookarounds instead of \b so that variations ending in
-                    # non-word characters ("c++", "c#", "node.js") still match.
+                    body = re.escape(normalize_text(variation))
                     pattern = re.compile(
-                        r"(?<![a-z0-9])"
-                        + re.escape(normalize_text(variation))
-                        + r"(?![a-z0-9])"
+                        r"(?<![a-z0-9])" + body + _VERSION_SUFFIX + r"(?![a-z0-9])"
                     )
                     self._patterns.append((skill_name, pattern))
 
+    def extract_skills_detailed(self, text: str) -> Dict[str, str]:
+        """Map each skill name to its first non-negated evidence snippet."""
+        text_norm = normalize_text(text)
+        found: Dict[str, str] = {}
+        for skill_name, pattern in self._patterns:
+            if skill_name in found:
+                continue
+            for match in pattern.finditer(text_norm):
+                if _is_negated(text_norm, match.start()):
+                    continue
+                found[skill_name] = _snippet(text_norm, match.start(), match.end())
+                break
+        return found
+
     def extract_skills(self, text: str) -> Set[str]:
         """Return the set of taxonomy skill names present in *text*."""
-        text_norm = normalize_text(text)
-        found_skills = set()
-
-        for skill_name, pattern in self._patterns:
-            if pattern.search(text_norm):
-                found_skills.add(skill_name)
-
-        return found_skills
+        return set(self.extract_skills_detailed(text))
 
     def extract_experience_years(self, text: str, mode: str = "max") -> int:
-        """Return the number of years of experience mentioned in *text*.
+        from extractors.experience import extract_experience_years as _years
 
-        *mode* picks which bound of a range like "3-5 years" is used:
-        "max" for résumés (a CV's highest figure approximates total
-        experience) and "min" for job descriptions (the lowest figure the
-        role accepts, so a 4-year candidate is not penalised by a "3-5
-        years" ad). Fractional years are truncated.
-        """
-        if mode not in ("min", "max"):
-            raise ValueError(f"mode must be 'min' or 'max', got {mode!r}")
-        text_norm = normalize_text(text)
-        years = [
-            float(bound.replace(",", "."))
-            for match in _YEARS_RE.findall(text_norm)
-            for bound in match
-            if bound
-        ]
-        for word, value in _WORD_NUMBERS.items():
-            word_re = re.compile(
-                _WORD_YEARS_RE_TEMPLATE.format(word=word), re.IGNORECASE
-            )
-            if word_re.search(text_norm):
-                years.append(float(value))
-        if not years:
-            return 0
-        return int(max(years) if mode == "max" else min(years))
+        return _years(text, mode=mode)

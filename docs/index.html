@@ -15,10 +15,14 @@
   <header>
     <h1>🗂️ Résumé Screening System</h1>
     <p>
-      Ranks résumés against a job description with a fixed weighted formula —
-      and tells each candidate how to improve their CV. Works in
+      Ranks résumés against a job description with a transparent weighted
+      formula — and tells each candidate how to improve their CV. Works in
       <strong>English and French</strong> (CVs and job descriptions).
       Everything runs <strong>in your browser</strong>; files never leave your machine.
+    </p>
+    <p class="notice" role="note">
+      Decision-support only — not an automated hiring or rejection decision.
+      A human must review every score.
     </p>
   </header>
 
@@ -28,14 +32,53 @@
       <div class="row">
         <button id="load-sample-jd" class="ghost" type="button">Sample JD (EN)</button>
         <button id="load-sample-jd-fr" class="ghost" type="button">Exemple d'offre (FR)</button>
+        <button id="extract-jd-btn" class="ghost" type="button">Extract requirements</button>
       </div>
       <textarea id="jd-input" rows="10"
         placeholder="Paste the job description here — English or French (Collez l'offre d'emploi ici, en français ou en anglais)."></textarea>
     </section>
 
+    <section class="card" id="jd-insight" hidden>
+      <div class="insight-head">
+        <h2>2 · Review required fields</h2>
+        <button id="reextract-btn" class="ghost" type="button">Re-extract from JD</button>
+      </div>
+      <p class="hint">
+        Edit these before screening. Move a skill between Required / Preferred / Keywords,
+        remove noise, or add a term the parser missed. Empty categories are dropped
+        and their weight is redistributed.
+      </p>
+      <div id="insight-warnings"></div>
+      <p id="weight-note" class="hint"></p>
+      <p class="hint">Experience detected: <strong id="insight-years">—</strong></p>
+      <div class="bucket">
+        <h3>Required</h3>
+        <div class="chip-row" id="chips-required"></div>
+      </div>
+      <div class="bucket">
+        <h3>Preferred</h3>
+        <div class="chip-row" id="chips-preferred"></div>
+      </div>
+      <div class="bucket">
+        <h3>Keywords</h3>
+        <div class="chip-row" id="chips-keywords"></div>
+      </div>
+      <form id="add-skill-form" class="add-skill">
+        <label class="sr-only" for="add-skill-name">Add a skill</label>
+        <input id="add-skill-name" type="text" placeholder="Add a skill the parser missed">
+        <label class="sr-only" for="add-skill-bucket">Bucket</label>
+        <select id="add-skill-bucket">
+          <option value="required">Required</option>
+          <option value="preferred">Preferred</option>
+          <option value="keywords">Keyword</option>
+        </select>
+        <button type="submit">Add</button>
+      </form>
+    </section>
+
     <section class="card">
-      <label for="resume-files"><strong>2 · Choose résumé files</strong> (PDF, DOCX, TXT)</label>
-      <input type="file" id="resume-files" multiple accept=".pdf,.docx,.txt">
+      <label for="resume-files"><strong>3 · Choose résumé files</strong> (PDF, DOCX, TXT, MD)</label>
+      <input type="file" id="resume-files" multiple accept=".pdf,.docx,.txt,.md,.markdown">
       <div class="row">
         <button id="load-sample-resumes" class="ghost" type="button">Or load 6 sample résumés (EN + FR)</button>
       </div>
@@ -74,7 +117,8 @@
 
   <footer>
     <p>
-      Scoring: <span id="scoring-summary">required skills 50% · preferred 25% · experience 15% · keywords 10%</span>.
+      Scoring: <span id="scoring-summary">required skills 50% · preferred 25% · experience 15% · keywords 10%</span>
+      (defaults; empty categories are dropped and the remaining weights re-normalized).
       Scores are a first-pass signal to support, not replace, human review.
     </p>
   </footer>

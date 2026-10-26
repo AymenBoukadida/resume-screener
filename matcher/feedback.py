@@ -1,13 +1,6 @@
-"""Actionable CV-improvement feedback based on screening results.
+"""CV-improvement feedback based on screening results."""
 
-Turns a candidate's score breakdown into concrete rewrite tips the
-candidate can act on ("add this skill", "state your years explicitly").
-
-A JavaScript mirror of this module lives in docs/app.js
-(generateFeedback) — keep the two in sync when changing the tips.
-"""
-
-from typing import List
+from typing import Dict, List, Optional
 
 from matcher.scorer import CandidateScore
 from parsers.jd_parser import JobRequirements
@@ -16,11 +9,52 @@ from parsers.jd_parser import JobRequirements
 def generate_feedback(
     candidate: CandidateScore,
     requirements: JobRequirements,
-    default_expected_years: int = 3,
+    default_expected_years: int = 0,
+    fields: Optional[Dict[str, object]] = None,
 ) -> List[str]:
-    """Return a list of concrete improvement tips for one résumé."""
+    """Return improvement tips for one résumé."""
     tips: List[str] = []
     target_years = requirements.experience_years or default_expected_years
+
+    if fields is not None:
+        email = str(fields.get("email") or "").strip()
+        phone = str(fields.get("phone") or "").strip()
+        location = str(fields.get("location") or "").strip()
+        name = str(fields.get("name") or "").strip()
+        education = fields.get("education_level") or fields.get("education")
+        certifications = fields.get("certifications")
+        if not name:
+            tips.append(
+                "No candidate name was detected. Put your full name on its own "
+                "line at the very top of the CV, in plain text."
+            )
+        if not email and not phone:
+            tips.append(
+                "No email address or phone number was detected. Add both in "
+                "plain text near the top (not inside an image or text box) so "
+                "a recruiter can contact you."
+            )
+        elif not email:
+            tips.append(
+                "No email address was detected. Add a professional email in "
+                "plain text near the top of the CV."
+            )
+        elif not phone:
+            tips.append(
+                "No phone number was detected. Add one in plain text near the "
+                "top of the CV, including the country code if relevant."
+            )
+        if not location:
+            tips.append(
+                "No location was detected. Add your city and country (or "
+                'region) near your contact details, e.g. "Toronto, Canada".'
+            )
+        if not education and not certifications:
+            tips.append(
+                "No education or certification details were detected. Add a "
+                "short Education section with the degree/diploma, institution "
+                "and year, plus any licences or certifications."
+            )
 
     for skill in sorted(candidate.missing_required):
         tips.append(
