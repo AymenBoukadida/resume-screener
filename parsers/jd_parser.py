@@ -23,7 +23,8 @@ SECTION_PATTERNS = [
         r"(?:nice|good)[\s-]?to[\s-]?haves?(?:\s+skills?)?|"
         r"bonus(?:\s+(?:skills?|points?))?(?:\s+if\s+you\s+have)?|"
         r"desirable|desired(?:\s+skills?)?|pluses?|a\s+plus|assets?|"
-        r"advantages?|"
+        r"advantages?|certifications?\s*\([^)]*\b(?:advantage|asset|"
+        r"preferred|plus)\b[^)]*\)|"
         r"what\s+makes\s+you(?:\s+[a-z]+){0,4}|"
         r"optional(?:\s+(?:skills?|qualifications?))?|"
         r"(?:stand\s+out|extra\s+credit|even\s+better\s+if|"
@@ -54,7 +55,8 @@ SECTION_PATTERNS = [
         r"the\s+ideal\s+candidate|ideal\s+candidate|candidate\s+profile|"
         r"skills?(?:\s+(?:and|&)\s+experience)?|"
         r"experience\s+(?:and|&)\s+skills?|"
-        r"technical\s+skills?|key\s+skills?|core\s+skills?|competencies|"
+        r"(?:technical|soft|hard|key|core)\s+skills?(?:\s+required)?|"
+        r"competencies|"
         r"proficiencies|expertise|"
         r"education(?:\s+(?:and|&)\s+(?:certifications?|training))?|"
         r"educational\s+background|academic\s+background|"
@@ -119,6 +121,26 @@ def _iter_line_parts(line: str) -> List[str]:
     if len(parts) <= 1 or any(len(part) < 12 for part in parts):
         return [line]
     return parts
+
+
+_SUBHEADING_SMALL_WORDS = {
+    "and", "or", "of", "the", "for", "to", "in", "on", "with", "&",
+}
+
+
+def _looks_like_subheading(line: str) -> bool:
+    if len(line.split()) > 6 or line[-1] in ".!?;,":
+        return False
+    if any(char.isdigit() for char in line):
+        return False
+    words = re.findall(r"[A-Za-zÀ-ÖØ-öø-ÿ][A-Za-zÀ-ÖØ-öø-ÿ'’.-]*", line)
+    if len(words) < 2:
+        return False
+    significant = [
+        word for word in words if word.lower() not in _SUBHEADING_SMALL_WORDS
+    ]
+    return bool(significant) and all(word[0].isupper() for word in significant)
+
 
 MIN_SIGNAL_SKILLS = 2
 
@@ -245,6 +267,8 @@ class JDParser:
                     if line_norm.endswith(":") and len(line_norm[:-1].split()) <= 5:
                         current = None
                         continue
+                    if _looks_like_subheading(line):
+                        continue
 
                 bucket = current
                 if bucket is None or bucket == "experience":
@@ -255,6 +279,10 @@ class JDParser:
                     cue = _cue_bucket(line_norm)
                     if cue == "preferred":
                         bucket = "preferred"
+                elif bucket == "preferred":
+                    cue = _cue_bucket(line_norm)
+                    if cue == "required":
+                        bucket = "required"
                 if bucket:
                     sections[bucket].append(part)
                 else:

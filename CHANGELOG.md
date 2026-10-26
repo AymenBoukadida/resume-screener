@@ -28,6 +28,13 @@
 - Inline headers (`Required skills: Python, Django`,
   `Compétences requises : Python, Django`) and French headers such as
   `Compétences souhaitées` are supported.
+- Inline labels with extra words (`Job Requirements & Knowledge:`) and
+  parenthetical preferred headings (`Certifications (Considered an
+  Advantage)`) are recognized.
+- Thematic subheadings such as `Security Operations & Vulnerability
+  Management` are treated as structure instead of requirements.
+- Explicit degree and experience lines under a Preferred heading are moved
+  back to Required.
 - Markdown headings and numbered lists are treated as structure.
 - Section-less JDs still fall back to treating every extracted skill as
   required.
@@ -48,6 +55,11 @@
 - Term mining handles morphology, canonicalisation guards, line-initial
   all-caps acronyms (`CWB`, `BLS`) and French apostrophe elisions
   (`d'expérience` → `d` + `experience`).
+- Generic single tokens no longer canonicalise to unrelated taxonomy skills
+  (`security` → Security+, `activities` → ADL assistance, `policies` → HR
+  policies). Symbol-only variations such as `C++` and `Security+` are left to
+  exact taxonomy matching.
+- Short non-bullet lines no longer count as bullet evidence when mining terms.
 - Added Markdown résumé and job-description support.
 - Text cleanup dehyphenates words split across line breaks
   (`Déve-\nloppement` → `Développement`).

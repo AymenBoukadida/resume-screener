@@ -163,7 +163,7 @@
     "patch management": ["patch management", "patching", "security patching", "patch deployment", "gestion des correctifs"],
     "backup and recovery": ["backup", "backups", "backup and recovery", "backup and restore", "disaster recovery", "veeam", "sauvegarde", "sauvegardes", "gestion des sauvegardes"],
     "server administration": ["server administration", "server management", "server technologies", "windows server", "linux server", "system administration", "systems administration", "administration systeme", "administration des serveurs"],
-    "active directory": ["active directory", "ad ds", "active directory domain services", "group policy", "gpo"],
+    "active directory": ["active directory", "ad ds", "active directory domain services", "group policy", "group policies", "gpo"],
     "virtualization": ["virtualization", "virtualisation", "vmware", "vsphere", "virtualbox", "hyper-v", "hyperv", "kvm"],
     "troubleshooting": ["troubleshooting", "troubleshoot", "depannage"]
   },

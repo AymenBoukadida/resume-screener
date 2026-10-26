@@ -49,7 +49,8 @@ GENERIC_WORDS = {
     "interviews", "application", "applications", "apply", "applicant",
     "applicants", "candidate", "candidates", "resume", "resumes", "cv",
     "hiring", "recruitment", "recruiter", "recruiters",
-    "team", "teams", "teammate", "teammates", "environment",
+    "team", "teams", "teammate", "teammates", "group", "groups",
+    "environment",
     "environments", "culture", "values", "mission", "vision", "people",
     "person", "daily", "time", "full", "part",
     "schedule", "schedules", "weekend", "weekends", "hour", "hours",
@@ -60,10 +61,12 @@ GENERIC_WORDS = {
     "university", "college", "academy", "experience", "experiences",
     "skill", "skills", "knowledge", "abilities", "ability", "strong",
     "excellent", "good", "great", "solid", "proven", "including",
-    "include", "includes", "various", "similar", "relevant", "following",
-    "preferred", "required", "responsibilities", "responsibility",
-    "requirement", "requirements", "qualification", "qualifications",
-    "task", "tasks", "duty", "duties", "looking", "join", "help", "new",
+    "include", "includes", "various", "similar", "relevant", "related",
+    "continuous", "following", "preferred", "required", "considered",
+    "responsibilities", "responsibility", "requirement", "requirements",
+    "qualification", "qualifications", "policy", "policies",
+    "task", "tasks", "duty", "duties", "activities", "initiatives",
+    "looking", "join", "help", "new",
     "well", "across", "within", "please", "contact", "check", "learn",
     "life", "us", "equal", "diversity", "inclusion", "accommodation",
     "request", "requests", "tool", "tools", "platform", "platforms",
@@ -72,18 +75,21 @@ GENERIC_WORDS = {
     "growth", "training", "programs", "service",
     "services", "system", "systems", "software", "application",
     "applications", "business", "testing",
-    "network", "networks", "user", "users", "product",
+    "network", "networks", "user", "users", "product", "security",
     "project", "projects", "process", "processes", "technical",
     "understanding", "ability",
     "nice", "ideally", "asset", "assets", "advantage", "advantages",
-    "client", "clients", "customer", "customers", "linkedin",
+    "client", "clients", "customer", "customers", "vendor", "vendors",
+    "third-party", "linkedin",
     "instagram", "facebook", "twitter", "youtube", "tiktok",
     "north", "south", "east", "west", "northeast", "northwest",
     "southeast", "southwest", "america", "canada", "europe", "online",
     "senior", "junior",
     "alert", "alerts", "incident", "incidents", "long", "view",
+    "finding", "findings", "risk", "risks",
     "support", "respond", "escalate", "monitor", "complete", "perform",
-    "ensure", "maintain", "provide", "assist", "handle", "review",
+    "participate", "ensure", "maintain", "provide", "assist", "handle",
+    "review", "reviews",
     "identify", "coordinate", "friendly", "operational", "insertion",
     "poste", "postes", "emploi", "metier", "entreprise", "societe",
     "equipe", "equipes", "lieu", "salaire", "remuneration", "avantage",
@@ -315,6 +321,11 @@ def build_variation_index(taxonomy: Dict) -> _VariationIndex:
     for skills_dict in taxonomy.values():
         for skill, variations in skills_dict.items():
             for variation in variations:
+                normalized = normalize_text(variation).strip()
+                if not normalized:
+                    continue
+                if not normalized[0].isalnum() or not normalized[-1].isalnum():
+                    continue
                 tokens = tuple(_term_tokens(variation))
                 if tokens:
                     index.append((tokens, skill))
@@ -342,7 +353,12 @@ def _canonical(
             and _contains(term, variation)
         ):
             rank = 2
-        elif len(term) == 1 and len(variation) >= 2 and _contains(variation, term):
+        elif (
+            len(term) == 1
+            and len(variation) >= 2
+            and term[0] not in GENERIC_WORDS
+            and _contains(variation, term)
+        ):
             rank = 1
         else:
             continue
@@ -395,7 +411,7 @@ def mine_terms(
                     if term not in first_idx or idx < first_idx[term]:
                         first_idx[term] = idx
                         first_bucket[term] = bucket
-                    if bucket in bullet_in and len(text.split()) <= 12:
+                    if is_bullet and bucket in bullet_in and len(text.split()) <= 12:
                         bullet_in[bucket].add(term)
                     if bucket in ("required", "preferred") and term not in section_of:
                         section_of[term] = bucket

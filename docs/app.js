@@ -228,8 +228,8 @@ function extractYears(text, mode = "max", today = new Date()) {
 /* ---------------- JD parsing -------------------------------------------- */
 
 const SECTION_PATTERNS = [
-  ["preferred", /^(?:preferred(?:\s+(?:skills?|qualifications?|experience|requirements?))?|(?:nice|good)[\s-]?to[\s-]?haves?(?:\s+skills?)?|bonus(?:\s+(?:skills?|points?))?(?:\s+if\s+you\s+have)?|desirable|desired(?:\s+skills?)?|pluses?|a\s+plus|assets?|advantages?|what\s+makes\s+you(?:\s+[a-z]+){0,4}|optional(?:\s+(?:skills?|qualifications?))?|(?:stand\s+out|extra\s+credit|even\s+better\s+if|you\s+might\s+also\s+have)|additional\s+(?:skills?|qualifications?)|souhaite(?:e|es|s)?|atouts?|apprecie(?:e|es|s)?|serait\s+un\s+plus|un\s+plus|les\s+plus|optionnel(?:le)?s?|competences?\s+(?:souhaitees?|recherchees?|desirables?)|qualifications?\s+souhaitees?)$/i],
-  ["required", /^(?:required(?:\s+(?:skills?|qualifications?|experience|education|certifications?))?|requirements?|technical\s+requirements?|key\s+requirements?|must[\s-]?haves?(?:\s+skills?)?|essential|(?:minimum|basic|preferred|additional|desired)\s+(?:qualifications?|requirements?)|qualifications?|qualifications?\s+(?:and|&)\s+experience|requirements?\s+(?:and|&)\s+qualifications?|what\s+you(?:\s+will)?\s+(?:bring|need|have|offer)|what\s+you(?:'ll|\s+will)\s+(?:bring|need|have|offer)|what\s+we(?:'re|\s+are)\s+looking\s+for|what\s+we\s+need|your\s+(?:profile|background)|about\s+you|who\s+you\s+are|you\s+(?:have|bring|offer)|profile|background|the\s+ideal\s+candidate|ideal\s+candidate|candidate\s+profile|skills?(?:\s+(?:and|&)\s+experience)?|experience\s+(?:and|&)\s+skills?|technical\s+skills?|key\s+skills?|core\s+skills?|competencies|proficiencies|expertise|education(?:\s+(?:and|&)\s+(?:certifications?|training))?|educational\s+background|academic\s+background|certifications?(?:\s+(?:and|&)\s+licen[cs]es?)?|certificates?|licen[cs]es?|credentials?|languages?|language\s+skills?|ce\s+que\s+vous\s+(?:apportez|offrez)|profil(?:\s+recherche)?|votre\s+profil|a\s+propos\s+de\s+vous|requises?|requis|exigees?|exigences?|essentielles?|obligatoires?|indispensables?|necessaires?|prerequis|competences(?:\s+(?:requises?|et\s+experience))?|formation(?:\s+requise)?|diplomes?(?:\s+requis)?|certifications?\s+requises?|langues?|competences?\s+linguistiques?)$/i],
+  ["preferred", /^(?:preferred(?:\s+(?:skills?|qualifications?|experience|requirements?))?|(?:nice|good)[\s-]?to[\s-]?haves?(?:\s+skills?)?|bonus(?:\s+(?:skills?|points?))?(?:\s+if\s+you\s+have)?|desirable|desired(?:\s+skills?)?|pluses?|a\s+plus|assets?|advantages?|certifications?\s*\([^)]*\b(?:advantage|asset|preferred|plus)\b[^)]*\)|what\s+makes\s+you(?:\s+[a-z]+){0,4}|optional(?:\s+(?:skills?|qualifications?))?|(?:stand\s+out|extra\s+credit|even\s+better\s+if|you\s+might\s+also\s+have)|additional\s+(?:skills?|qualifications?)|souhaite(?:e|es|s)?|atouts?|apprecie(?:e|es|s)?|serait\s+un\s+plus|un\s+plus|les\s+plus|optionnel(?:le)?s?|competences?\s+(?:souhaitees?|recherchees?|desirables?)|qualifications?\s+souhaitees?)$/i],
+  ["required", /^(?:required(?:\s+(?:skills?|qualifications?|experience|education|certifications?))?|requirements?|technical\s+requirements?|key\s+requirements?|must[\s-]?haves?(?:\s+skills?)?|essential|(?:minimum|basic|preferred|additional|desired)\s+(?:qualifications?|requirements?)|qualifications?|qualifications?\s+(?:and|&)\s+experience|requirements?\s+(?:and|&)\s+qualifications?|what\s+you(?:\s+will)?\s+(?:bring|need|have|offer)|what\s+you(?:'ll|\s+will)\s+(?:bring|need|have|offer)|what\s+we(?:'re|\s+are)\s+looking\s+for|what\s+we\s+need|your\s+(?:profile|background)|about\s+you|who\s+you\s+are|you\s+(?:have|bring|offer)|profile|background|the\s+ideal\s+candidate|ideal\s+candidate|candidate\s+profile|skills?(?:\s+(?:and|&)\s+experience)?|experience\s+(?:and|&)\s+skills?|(?:technical|soft|hard|key|core)\s+skills?(?:\s+required)?|competencies|proficiencies|expertise|education(?:\s+(?:and|&)\s+(?:certifications?|training))?|educational\s+background|academic\s+background|certifications?(?:\s+(?:and|&)\s+licen[cs]es?)?|certificates?|licen[cs]es?|credentials?|languages?|language\s+skills?|ce\s+que\s+vous\s+(?:apportez|offrez)|profil(?:\s+recherche)?|votre\s+profil|a\s+propos\s+de\s+vous|requises?|requis|exigees?|exigences?|essentielles?|obligatoires?|indispensables?|necessaires?|prerequis|competences(?:\s+(?:requises?|et\s+experience))?|formation(?:\s+requise)?|diplomes?(?:\s+requis)?|certifications?\s+requises?|langues?|competences?\s+linguistiques?)$/i],
   ["experience", /^(?:experience|experiences|responsibilit(?:y|ies)|what\s+you.{0,3}ll\s+do|what\s+you\s+will\s+do|(?:a\s+)?day\s+in\s+the\s+life|day[\s-]?to[\s-]?day|your\s+mission|your\s+missions|duties|missions|taches|au\s+quotidien|ce\s+que\s+vous\s+(?:ferez|allez\s+faire)|vos\s+missions)$/i],
 ];
 const MIN_SIGNAL_SKILLS = 2;
@@ -240,6 +240,20 @@ const PREFERRED_CUE_RE = /\b(?:preferred|nice[\s-]?to[\s-]?have|good[\s-]?to[\s-
 
 function matchSectionLabel(text) {
   for (const [label, pattern] of SECTION_PATTERNS) {
+    if (pattern.test(text)) return label;
+  }
+  return null;
+}
+
+const SECTION_SEARCH_PATTERNS = SECTION_PATTERNS.map(([label, pattern]) => {
+  let source = pattern.source;
+  if (source.startsWith("^")) source = source.slice(1);
+  if (source.endsWith("$")) source = source.slice(0, -1);
+  return [label, new RegExp(source, pattern.flags)];
+});
+
+function matchInlineLabel(text) {
+  for (const [label, pattern] of SECTION_SEARCH_PATTERNS) {
     if (pattern.test(text)) return label;
   }
   return null;
@@ -268,6 +282,22 @@ function iterLineParts(line) {
     return [line];
   }
   return filtered;
+}
+
+const SUBHEADING_SMALL_WORDS = new Set([
+  "and", "or", "of", "the", "for", "to", "in", "on", "with", "&",
+]);
+
+function looksLikeSubheading(line) {
+  if (line.split(/\s+/).length > 6 || ".!?;,".includes(line[line.length - 1])) {
+    return false;
+  }
+  if (/\d/.test(line)) return false;
+  const words = line.match(/[A-Za-zÀ-ÖØ-öø-ÿ][A-Za-zÀ-ÖØ-öø-ÿ'’.-]*/g) || [];
+  if (words.length < 2) return false;
+  const significant = words.filter(word => !SUBHEADING_SMALL_WORDS.has(word.toLowerCase()));
+  return significant.length > 0 &&
+    significant.every(word => word[0] === word[0].toUpperCase());
 }
 
 function matchHeader(line) {
@@ -323,7 +353,7 @@ const GENERIC_WORDS = new Set([
   "interviews", "application", "applications", "apply", "applicant",
   "applicants", "candidate", "candidates", "resume", "resumes", "cv",
   "hiring", "recruitment", "recruiter", "recruiters", "team", "teams",
-  "teammate", "teammates", "environment", "environments", "culture",
+  "teammate", "teammates", "group", "groups", "environment", "environments", "culture",
   "values", "mission", "vision", "people", "person", "daily", "time",
   "full", "part", "schedule", "schedules", "weekend", "weekends",
   "hour", "hours", "day", "days", "year", "years", "annual",
@@ -333,10 +363,12 @@ const GENERIC_WORDS = new Set([
   "academy", "experience", "experiences", "skill", "skills",
   "knowledge", "abilities", "ability", "strong", "excellent", "good",
   "great", "solid", "proven", "including", "include", "includes",
-  "various", "similar", "relevant", "following", "preferred",
-  "required", "responsibilities", "responsibility", "requirement",
-  "requirements", "qualification", "qualifications", "task", "tasks",
-  "duty", "duties", "looking", "join", "help", "new", "well", "across",
+  "various", "similar", "relevant", "related", "continuous", "following",
+  "preferred", "required", "considered", "responsibilities",
+  "responsibility", "requirement", "requirements", "qualification",
+  "qualifications", "policy", "policies", "task", "tasks", "duty",
+  "duties", "activities", "initiatives", "looking", "join", "help",
+  "new", "well", "across",
   "within", "please", "contact", "check", "learn", "life", "us",
   "equal", "diversity", "inclusion", "accommodation", "request",
   "requests", "tool", "tools", "platform", "platforms", "solution",
@@ -345,19 +377,22 @@ const GENERIC_WORDS = new Set([
   "training", "programs", "service", "services",
   "system", "systems", "software", "application", "applications",
   "business", "testing",
-  "network", "networks", "user", "users", "product", "project",
-  "projects", "process", "processes", "technical",
+  "network", "networks", "user", "users", "product", "security",
+  "project", "projects", "process", "processes", "technical",
   "understanding",
   "nice", "ideally", "asset", "assets", "advantage", "advantages",
   "alert", "alerts", "incident", "incidents", "long", "view",
-  "client", "clients", "customer", "customers", "linkedin",
+  "finding", "findings", "risk", "risks",
+  "client", "clients", "customer", "customers", "vendor", "vendors",
+  "third-party", "linkedin",
   "instagram", "facebook", "twitter", "youtube", "tiktok",
   "north", "south", "east", "west", "northeast", "northwest",
   "southeast", "southwest", "america", "canada", "europe", "online",
   "senior", "junior",
   "support", "respond", "escalate", "monitor", "complete", "perform",
-  "ensure", "maintain", "provide", "assist", "handle", "review",
-  "identify", "coordinate", "friendly", "operational", "insertion",
+  "participate", "ensure", "maintain", "provide", "assist", "handle",
+  "review", "reviews", "identify", "coordinate", "friendly",
+  "operational", "insertion",
   "poste", "postes", "emploi", "metier", "entreprise", "societe",
   "equipe", "equipes", "lieu", "salaire", "remuneration", "avantage",
   "avantages", "conges", "mutuelle", "entretien", "candidat",
@@ -564,6 +599,11 @@ function buildVariationIndex(taxonomy) {
   for (const skillsDict of Object.values(taxonomy)) {
     for (const [skill, variations] of Object.entries(skillsDict)) {
       for (const variation of variations) {
+        const normalized = normalizeText(variation).trim();
+        if (!normalized) continue;
+        if (!/[a-z0-9]/.test(normalized[0]) || !/[a-z0-9]/.test(normalized[normalized.length - 1])) {
+          continue;
+        }
         const tokens = miningTokens(variation);
         if (tokens.length) index.push([tokens, skill]);
       }
@@ -587,7 +627,10 @@ function canonicalizeTerm(term, index, proper) {
       properSet.has(variation[0]) && containsTokens(term, variation)
     ) {
       rank = 2;
-    } else if (term.length === 1 && variation.length >= 2 && containsTokens(variation, term)) {
+    } else if (
+      term.length === 1 && variation.length >= 2 &&
+      !GENERIC_WORDS.has(term[0]) && containsTokens(variation, term)
+    ) {
       rank = 1;
     }
     if (rank > bestRank) {
@@ -626,10 +669,11 @@ function mineTerms(records, existing) {
   const bulletIn = { required: new Set(), preferred: new Set() };
   const sectionOf = new Map();
 
-  for (const { bucket, text, idx } of records) {
+  for (const { bucket, text, isBullet, idx } of records) {
     if (isNonRequirementLine(text)) continue;
     const seenInLine = new Set();
     const vouched =
+      isBullet &&
       (bucket === "required" || bucket === "preferred") &&
       text.split(/\s+/).length <= 12;
     for (const run of contentRuns(text)) {
@@ -1271,7 +1315,7 @@ function splitSections(jdText) {
         const idx = partNorm.indexOf(":");
         const left = partNorm.slice(0, idx).trim();
         const right = partNorm.slice(idx + 1).trim();
-        const label = matchSectionLabel(left);
+        const label = matchInlineLabel(left);
         if (label) {
           current = label;
           if (right) {
@@ -1292,6 +1336,7 @@ function splitSections(jdText) {
           current = null;
           continue;
         }
+        if (looksLikeSubheading(part)) continue;
       }
 
       let bucket = current;
@@ -1301,6 +1346,9 @@ function splitSections(jdText) {
       } else if (bucket === "required") {
         const cue = cueBucket(partNorm);
         if (cue === "preferred") bucket = "preferred";
+      } else if (bucket === "preferred") {
+        const cue = cueBucket(partNorm);
+        if (cue === "required") bucket = "required";
       }
       if (bucket) sections[bucket].push(part);
       else sections.context.push(part);

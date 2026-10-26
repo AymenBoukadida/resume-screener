@@ -302,3 +302,65 @@ def test_find_resume_files_recursive(tmp_path):
     assert {
         p.name for p in find_resume_files(tmp_path, recursive=True)
     } == {"top.txt", "nested.docx"}
+
+
+def test_parenthetical_advantage_header_and_required_overrides():
+    jd = """
+Job Requirements:
+- Security operations
+Certifications (Considered an Advantage)
+- ITIL Foundation.
+Bachelor's degree in Computer Science.
+Minimum 3 years of experience in IT.
+"""
+    reqs = JDParser().parse(jd)
+    assert "itil" in reqs.preferred_skills
+    assert "bachelor's degree" in reqs.required_skills
+    assert reqs.experience_years == 3
+    assert "considered" not in reqs.preferred_skills
+
+
+def test_generic_single_tokens_not_canonicalized():
+    jd = """
+Required skills:
+- Security
+- Activities
+- Policies
+- Group policies
+"""
+    reqs = JDParser().parse(jd)
+    assert "security+" not in reqs.required_skills
+    assert "adl assistance" not in reqs.required_skills
+    assert "hr policies" not in reqs.required_skills
+    assert "group policies" not in reqs.required_skills
+    assert "active directory" in reqs.required_skills
+
+
+def test_theme_subheadings_and_duty_words_not_mined():
+    jd = """
+Job Requirements:
+Security Operations & Vulnerability Management
+Monitor, track, and report security vulnerabilities.
+Participate in audits.
+Participate in reviews.
+Participate in assessments.
+Contribute to continuous improvement initiatives.
+Contribute to technology refresh initiatives.
+Participate in security awareness initiatives.
+Reporting & Governance
+Track remediation KPIs.
+"""
+    reqs = JDParser().parse(jd)
+    assert "governance" not in reqs.required_skills
+    assert "participate" not in reqs.required_skills
+    assert "initiatives" not in reqs.required_skills
+
+
+def test_inline_required_label_with_extra_words():
+    jd = """
+Job Requirements & Knowledge:
+Security Operations & Vulnerability Management
+Provide Level 2 support including access management.
+"""
+    reqs = JDParser().parse(jd)
+    assert "access management" in reqs.required_skills
