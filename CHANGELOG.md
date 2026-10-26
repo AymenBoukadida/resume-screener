@@ -110,6 +110,9 @@
 - The file picker accepts Markdown in addition to PDF, DOCX and TXT.
 - Kept `docs/data/` in sync with the canonical `data/` files through
   `scripts/sync_web_data.py`.
+- The app version is shown in the footer, and `app.js` plus the scoring data
+  are loaded with a cache-busting version, so an old cached build cannot
+  silently keep producing stale results.
 
 ### Tests and documentation
 

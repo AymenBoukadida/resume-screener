@@ -9,7 +9,7 @@
        the two SRI-pinned CDN libraries may load or execute. -->
   <meta name="referrer" content="no-referrer">
   <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' https://cdnjs.cloudflare.com; worker-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; font-src 'self'; base-uri 'none'">
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="style.css?v=2026-10-26">
 </head>
 <body>
   <header>
@@ -120,6 +120,7 @@
       Scoring: <span id="scoring-summary">required skills 50% · preferred 25% · experience 15% · keywords 10%</span>
       (defaults; empty categories are dropped and the remaining weights re-normalized).
       Scores are a first-pass signal to support, not replace, human review.
+      · web build <span id="app-version">dev</span>
     </p>
   </footer>
 
@@ -131,6 +132,6 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"
           integrity="sha384-nFoSjZIoH3CCp8W639jJyQkuPHinJ2NHe7on1xvlUA7SuGfJAfvMldrsoAVm6ECz"
           crossorigin="anonymous"></script>
-  <script src="app.js"></script>
+  <script src="app.js?v=2026-10-26"></script>
 </body>
 </html>

@@ -1,6 +1,11 @@
 /* Résumé Screening System - static web app. */
 "use strict";
 
+// Bump this whenever docs/app.js or docs/data/* changes. It is used both as a
+// cache-busting query string and as the build label in the footer, so a stale
+// cached app is visible instead of silently producing old scores.
+const APP_VERSION = "2026-10-26";
+
 const state = {
   config: null,
   taxonomy: null,
@@ -2064,7 +2069,7 @@ const SAMPLE_RESUMES = [
 ];
 
 async function loadSampleJd(file = "data/sample_jd.txt") {
-  const resp = await fetch(file);
+  const resp = await fetch(file, { cache: "no-store" });
   if (!resp.ok) throw new Error("sample JD not found");
   els.jd.value = await resp.text();
   extractFromJd();
@@ -2074,7 +2079,7 @@ async function loadSampleJd(file = "data/sample_jd.txt") {
 async function loadSampleResumes() {
   const transfer = new DataTransfer();
   for (const name of SAMPLE_RESUMES) {
-    const resp = await fetch("samples/" + name);
+    const resp = await fetch("samples/" + name, { cache: "no-store" });
     if (!resp.ok) throw new Error("sample résumés missing");
     transfer.items.add(new File([await resp.arrayBuffer()], name));
   }
@@ -2098,11 +2103,13 @@ async function init() {
   els.insight = document.getElementById("jd-insight");
   els.weightNote = document.getElementById("weight-note");
   els.insightWarnings = document.getElementById("insight-warnings");
+  els.appVersion = document.getElementById("app-version");
+  if (els.appVersion) els.appVersion.textContent = `v${APP_VERSION}`;
 
   try {
     const [configResp, taxonomyResp] = await Promise.all([
-      fetch("data/config.json"),
-      fetch("data/skills_taxonomy.json"),
+      fetch(`data/config.json?v=${APP_VERSION}`, { cache: "no-store" }),
+      fetch(`data/skills_taxonomy.json?v=${APP_VERSION}`, { cache: "no-store" }),
     ]);
     if (!configResp.ok || !taxonomyResp.ok) {
       throw new Error("data files missing");
@@ -2205,7 +2212,7 @@ async function init() {
 init();
 
 window.__rss = {
-  state, extractSkills, extractYears, parseJd, scoreCandidate,
-  generateFeedback, runScreening, normalizeText, matchTerms,
+  state, appVersion: APP_VERSION, extractSkills, extractYears, parseJd,
+  scoreCandidate, generateFeedback, runScreening, normalizeText, matchTerms,
   activeWeights, extractSkillsDetailed, extractFields,
 };
